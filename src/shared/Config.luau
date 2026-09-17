@@ -17,7 +17,6 @@
 	  Input     swipe thresholds and the keys
 	  Sounds    which built-in Roblox sounds play
 	  Save      DataStore settings
-	  Theme     colours
 ]]
 
 local Config = {}
@@ -76,9 +75,17 @@ Config.Combo = {
 --------------------------------------------------------------------------------
 Config.Timing = {
 	PerfectGap = 0.35, -- a correct swipe this soon after the previous one is PERFECT
-	MinMoveGap = 0.04, -- swipes arriving faster than this are ignored (spam guard)
 	WrongLockSeconds = 0.3, -- after a wrong swipe, swipes are ignored for this long
-	PopSeconds = 1.3, -- pause after a solve before the next deal (the pop plays here)
+	LockSlack = 0.1, -- the server's lock is this much shorter, so lag never eats the next swipe
+	PopSeconds = 0.8, -- pause after a solve before the next deal (the pop plays here)
+	-- Spam guard: a bucket of BurstMoves swipes that refills one per
+	-- MinMoveGap. Two honest swipes that arrive together both count; a
+	-- stream faster than a human does not.
+	MinMoveGap = 0.04,
+	BurstMoves = 3,
+	MinHumanPerMove = 0.08, -- a solve faster than this per move earns no speed bonus or best
+	SyncThrottle = 0.5, -- the server answers RequestSync at most this often per player
+	ResyncAfter = 2.5, -- the client asks for a Sync if a solve is not confirmed by then
 }
 
 --------------------------------------------------------------------------------
@@ -88,10 +95,9 @@ Config.Cube = {
 	CubieSize = 1, -- studs
 	Gap = 0.08, -- between cubies
 	StickerInset = 0.1, -- sticker is this much smaller than the cubie face, each side
-	StickerDepth = 0.04,
 	TurnSeconds = 0.11, -- one prompted turn
-	ShuffleTurnSeconds = 0.06, -- one turn during the scramble animation
-	Height = 1.6, -- cube centre above the pedestal top
+	ShuffleTurnSeconds = 0.04, -- one turn during the scramble animation
+	Height = 1.9, -- cube centre above the pedestal top (clear of the pedestal when it pops)
 	Body = Color3.fromRGB(20, 20, 24),
 	-- Sticker colours, by face. Standard colour scheme: white up, yellow
 	-- down, green front, blue back, red right, orange left.
@@ -135,6 +141,7 @@ Config.Lobby = {
 	PedestalRadius = 1.6,
 	PedestalHeight = 2.6,
 	StandBack = 2.6, -- the avatar stands this far behind the cube (toward the ring centre)
+	HipHeight = 3.2, -- the avatar's root part above the floor when placed
 	Colors = {
 		Floor = Color3.fromRGB(38, 40, 48),
 		Ring = Color3.fromRGB(52, 56, 68),
@@ -148,7 +155,6 @@ Config.Lobby = {
 --------------------------------------------------------------------------------
 Config.Input = {
 	SwipeMinPixels = 22, -- a drag this long commits as a swipe (before the finger lifts)
-	QueueMax = 2, -- swipes buffered while a turn animates
 	Keys = {
 		Up = { Enum.KeyCode.Up, Enum.KeyCode.W },
 		Down = { Enum.KeyCode.Down, Enum.KeyCode.S },
@@ -185,13 +191,6 @@ Config.Save = {
 	AutosaveSeconds = 90,
 	LoadRetries = 3,
 	RetryDelay = 1.5,
-}
-
---------------------------------------------------------------------------------
--- Theme
---------------------------------------------------------------------------------
-Config.Theme = {
-	Coin = Color3.fromRGB(231, 174, 58),
 }
 
 return Config

@@ -110,7 +110,10 @@ function SaveService.load(player: Player): (PlayerData, boolean)
 	local loaded: any = nil
 	local failed = true
 	if dataStore then
-		for attempt = 1, Config.Save.LoadRetries do
+		-- In Studio without API access every attempt fails instantly, so
+		-- one is enough; retrying would only delay the first deal.
+		local attempts = if RunService:IsStudio() then 1 else Config.Save.LoadRetries
+		for attempt = 1, attempts do
 			local ok, result = pcall(function()
 				return dataStore:GetAsync(keyFor(player))
 			end)
@@ -120,7 +123,9 @@ function SaveService.load(player: Player): (PlayerData, boolean)
 				break
 			end
 			warn(`[SaveService] load attempt {attempt} failed for {player.Name}: {result}`)
-			task.wait(Config.Save.RetryDelay)
+			if attempt < attempts then
+				task.wait(Config.Save.RetryDelay)
+			end
 		end
 	end
 	if failed and RunService:IsStudio() then
@@ -128,6 +133,12 @@ function SaveService.load(player: Player): (PlayerData, boolean)
 	end
 
 	local data = migrate(loaded)
+	-- Best times are a map of depth -> seconds; drop anything that is not.
+	for key, value in data.best :: { [string]: any } do
+		if type(value) ~= "number" or value <= 0 then
+			data.best[key] = nil
+		end
+	end
 	if not player.Parent then
 		-- They left during the retries. Registering a session now would
 		-- autosave a ghost forever; hand the data back and forget it.

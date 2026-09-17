@@ -101,15 +101,20 @@ function CubeView.build(root: CFrame): Api
 
 	local rootCF = root
 	local scale = 1
+	local placedScale = 1
 	local shakeOffset = Vector3.zero
 
 	local function place()
+		local resize = scale ~= placedScale
 		for _, c in live do
 			c.part.CFrame = rootCF
 				* CFrame.new(c.cur.Position * scale + shakeOffset)
 				* c.cur.Rotation
-			c.part.Size = Vector3.new(size * scale, size * scale, size * scale)
+			if resize then
+				c.part.Size = Vector3.new(size * scale, size * scale, size * scale)
+			end
 		end
+		placedScale = scale
 	end
 
 	----------------------------------------------------------------------------
@@ -245,8 +250,9 @@ function CubeView.build(root: CFrame): Api
 		end)
 	end
 
+	local shaking = false
 	local function isBusy(): boolean
-		return animating or shuffling or popping or #queue > 0
+		return animating or shuffling or popping or shaking or #queue > 0
 	end
 
 	----------------------------------------------------------------------------
@@ -409,6 +415,7 @@ function CubeView.build(root: CFrame): Api
 		sound("Wrong")
 		shakeToken += 1
 		local token = shakeToken
+		shaking = true
 		task.spawn(function()
 			local t0 = os.clock()
 			local seconds = Config.Cube.ShakeSeconds
@@ -424,6 +431,7 @@ function CubeView.build(root: CFrame): Api
 			if token == shakeToken then
 				shakeOffset = Vector3.zero
 				place()
+				shaking = false
 			end
 		end)
 	end

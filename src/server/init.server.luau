@@ -16,6 +16,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
@@ -55,7 +56,7 @@ local function answerSync(player: Player)
 		return
 	end
 	local now = os.clock()
-	if now - (lastAnswerAt[player] or 0) < 0.5 then
+	if now - (lastAnswerAt[player] or 0) < Config.Timing.SyncThrottle then
 		return
 	end
 	lastAnswerAt[player] = now
@@ -84,12 +85,17 @@ local function standAtPedestal(player: Player, character: Model)
 		return
 	end
 	local L = Config.Lobby
-	-- Pedestal top -> down to the floor, up 3 studs to the hip, back toward
-	-- the ring centre, and turned to face +Z (an avatar faces its -Z).
+	-- Pedestal top -> down to the floor, up to the hip, back toward the
+	-- ring centre, and turned to face +Z (an avatar faces its -Z).
 	local stand = pedestal
-		* CFrame.new(0, -L.PedestalHeight + 3.2, -L.StandBack)
+		* CFrame.new(0, -L.PedestalHeight + L.HipHeight, -L.StandBack)
 		* CFrame.Angles(0, math.pi, 0)
-	character:PivotTo(stand)
+	-- Roblox may still be placing the character at the spawn this frame;
+	-- one heartbeat later our placement is the last word.
+	RunService.Heartbeat:Wait()
+	if character.Parent then
+		character:PivotTo(stand)
+	end
 end
 
 --------------------------------------------------------------------------------
@@ -102,7 +108,7 @@ local function onPlayerAdded(player: Player)
 		return
 	end
 	if not SolveService.join(player) then
-		player:Kick("This ring is full (8 cubers). Try another server!")
+		player:Kick(`This ring is full ({Config.MaxPlayers} cubers). Try another server!`)
 		return
 	end
 	player.CharacterAdded:Connect(function(character)

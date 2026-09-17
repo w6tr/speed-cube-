@@ -8,16 +8,20 @@
 	quick enough to be PERFECT, when the cube is solved, and what the solve
 	pays. Coins, solves and best times only ever change here.
 
-	The player's cube on their screen is drawn by the client from the same
-	deal; if the two ever disagree (a dropped packet, a tampered client)
-	the next Sync wins and the client redraws.
+	Every swipe for the current deal gets an answer (MoveResult), even one
+	that was ignored for arriving too fast or during a lockout. The client
+	compares the answer's `step` with what it predicted and asks for a
+	Sync when they differ, so the two screens never drift for more than a
+	round trip. A swipe tagged with an old deal id is dropped silently:
+	the Sync that replaced the deal already told the client.
 
 	What can a cheater do? Read the solution: the arrows show it anyway.
 	Send swipes without looking: each is checked, a wrong one locks them
 	out briefly, so guessing four directions is slower than playing. Send
-	swipes faster than a human: the spam guard drops them. Skip sending
-	wrong swipes: their combo does not break -- a cosmetic multiplier,
-	capped, accepted for now.
+	swipes faster than a human: the token bucket drops them, and a solve
+	faster than MinHumanPerMove earns no speed bonus or best time. Skip
+	sending wrong swipes: their combo does not break -- a cosmetic
+	multiplier, capped, accepted for now.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -48,7 +52,8 @@ type State = {
 	deal: Deal?,
 	combo: number,
 	lockedUntil: number, -- after a wrong swipe
-	lastInputAt: number, -- spam guard
+	lastInputAt: number, -- for the token bucket
+	burst: number, -- tokens left in the bucket
 	dealCounter: number,
 	popping: boolean, -- between a solve and the next deal
 	leaderstats: { coins: IntValue, solves: IntValue, best: StringValue },
@@ -96,6 +101,24 @@ local function updateLeaderstats(state: State, data: SaveService.PlayerData)
 	local depth = dialDepth(data)
 	local best = data.best[tostring(depth)]
 	state.leaderstats.best.Value = if best then `{formatSeconds(best)} @{depth}` else "-"
+end
+
+--[[
+	The spam guard: a small bucket that refills at one token per MinMoveGap
+	and holds BurstMoves. Two honest swipes that bunch up in transit both
+	get through; a stream faster than a human does not.
+]]
+local function takeToken(state: State, now: number): boolean
+	state.burst = math.min(
+		Config.Timing.BurstMoves,
+		state.burst + (now - state.lastInputAt) / Config.Timing.MinMoveGap
+	)
+	state.lastInputAt = now
+	if state.burst < 1 then
+		return false
+	end
+	state.burst -= 1
+	return true
 end
 
 --------------------------------------------------------------------------------
@@ -167,7 +190,10 @@ local function finish(state: State, current: Deal)
 	end
 	local now = os.clock()
 	local seconds = math.max(0, now - (current.startedAt or now))
-	local fast = seconds <= Config.Coins.ParPerMove * current.depth
+	-- Faster than any human is a script (or a one-move deal, which is
+	-- timed as zero); it earns the base coins but no speed bonus or best.
+	local plausible = current.depth == 1 or seconds >= Config.Timing.MinHumanPerMove * current.depth
+	local fast = plausible and seconds <= Config.Coins.ParPerMove * current.depth
 	local mult = comboMult(state.combo)
 	local raw = Config.Coins.PerMove * current.depth
 		+ Config.Coins.SolveBonus
@@ -177,7 +203,7 @@ local function finish(state: State, current: Deal)
 
 	local key = tostring(current.depth)
 	local previousBest = data.best[key]
-	local isBest = previousBest == nil or seconds < previousBest
+	local isBest = plausible and (previousBest == nil or seconds < previousBest)
 	if isBest then
 		data.best[key] = seconds
 	end
@@ -214,23 +240,41 @@ end
 -- Remote handlers
 --------------------------------------------------------------------------------
 
-local function onMove(player: Player, direction: any)
+local function onMove(player: Player, direction: any, dealId: any, seq: any)
 	local state = states[player]
 	if not state or not Moves.isDirection(direction) then
 		return
 	end
+	if type(dealId) ~= "number" or type(seq) ~= "number" then
+		return
+	end
 	local current = state.deal
-	if not current or state.popping then
-		return
+	if not current or current.id ~= dealId or state.popping then
+		return -- an old deal: the Sync that replaced it already said so
 	end
+
+	local function reply(ok: boolean, ignored: boolean, perfect: boolean)
+		local result: Remotes.MoveResult = {
+			ok = ok,
+			ignored = ignored,
+			perfect = perfect,
+			step = current.step,
+			combo = state.combo,
+			dealId = current.id,
+			seq = seq,
+		}
+		Remotes.get(N.MoveResult):FireClient(player, result)
+	end
+
 	local now = os.clock()
-	if now < state.lockedUntil or now - state.lastInputAt < Config.Timing.MinMoveGap then
+	if now < state.lockedUntil or not takeToken(state, now) then
+		reply(false, true, false) -- heard, not judged
 		return
 	end
-	state.lastInputAt = now
 
 	local expected = Moves.get(current.solution[current.step + 1])
 	if not expected then
+		reply(false, true, false)
 		return
 	end
 
@@ -246,27 +290,17 @@ local function onMove(player: Player, direction: any)
 		if perfect then
 			current.perfects += 1
 		end
-		local result: Remotes.MoveResult = {
-			ok = true,
-			step = current.step,
-			combo = state.combo,
-			perfect = perfect,
-		}
-		Remotes.get(N.MoveResult):FireClient(player, result)
+		reply(true, false, perfect)
 		if current.step >= current.depth then
 			finish(state, current)
 		end
 	else
 		state.combo = 0
 		current.misses += 1
-		state.lockedUntil = now + Config.Timing.WrongLockSeconds
-		local result: Remotes.MoveResult = {
-			ok = false,
-			step = current.step,
-			combo = 0,
-			perfect = false,
-		}
-		Remotes.get(N.MoveResult):FireClient(player, result)
+		-- Shorter than the client's lock by LockSlack, so the first honest
+		-- swipe after the client unlocks is never ignored by a slower server.
+		state.lockedUntil = now + Config.Timing.WrongLockSeconds - Config.Timing.LockSlack
+		reply(false, false, false)
 	end
 end
 
@@ -350,7 +384,8 @@ function SolveService.join(player: Player): boolean
 		deal = nil,
 		combo = 0,
 		lockedUntil = 0,
-		lastInputAt = 0,
+		lastInputAt = os.clock(),
+		burst = Config.Timing.BurstMoves,
 		dealCounter = 0,
 		popping = false,
 		leaderstats = { coins = coins, solves = solves, best = best },

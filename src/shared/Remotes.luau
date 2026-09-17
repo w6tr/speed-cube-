@@ -19,12 +19,12 @@ local FOLDER_NAME = "Remotes"
 local NAMES: { [string]: string } = {
 	-- client -> server (asks; the server decides)
 	RequestSync = "RequestSync", -- ()                       "send me my state"
-	Move = "Move", -- (direction: "Up"|"Down"|"Left"|"Right")  the player swiped
+	Move = "Move", -- (direction, dealId: number, seq: number)  the player swiped
 	SetDepth = "SetDepth", -- (delta: number)                +1 / -1 on the depth dial
 
 	-- server -> client (facts; the client displays)
 	Sync = "Sync", -- (state: SyncState)                      the whole player state
-	MoveResult = "MoveResult", -- (result: MoveResult)        verdict on one swipe
+	MoveResult = "MoveResult", -- (result: MoveResult)        the answer to one swipe
 	Solved = "Solved", -- (result: SolveResult)               the deal is done; pop
 	Toast = "Toast", -- (kind: string, text: string)
 }
@@ -54,10 +54,13 @@ export type SyncState = {
 }
 
 export type MoveResult = {
-	ok: boolean,
-	step: number,
-	combo: number,
+	ok: boolean, -- it was the expected move
+	ignored: boolean, -- heard but not judged (too fast, or during a lockout)
 	perfect: boolean,
+	step: number, -- the server's step after this swipe
+	combo: number,
+	dealId: number,
+	seq: number, -- echoes the client's sequence number
 }
 
 export type SolveResult = {
@@ -100,7 +103,9 @@ end
 ]]
 function Remotes.get(name: string): RemoteEvent
 	assert(NAMES[name], `Remotes.get: unknown remote "{name}"`)
-	return folder:WaitForChild(name) :: RemoteEvent
+	local remote = folder:WaitForChild(name, 30)
+	assert(remote, `Remotes.get: "{name}" never appeared -- is the server script running?`)
+	return remote :: RemoteEvent
 end
 
 Remotes.Names = NAMES

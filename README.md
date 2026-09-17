@@ -46,7 +46,14 @@ The first things to eyeball in Studio:
 3. **Does the avatar stand behind the cube facing you?** If it is inside
    the pedestal or facing away, `Lobby.StandBack` and the stand offset in
    `init.server.luau` are the knobs.
-4. **Output** should show `[Speed Cube] server ready` and no red text.
+4. **Do the sounds play?** A click per turn, a fanfare on the pop, and a
+   groan on a wrong swipe. They are Roblox's built-in `rbxasset://` sounds;
+   if one is silent, swap its line in `Config.Sounds` for any Creator
+   Store id.
+5. **On a phone (Test -> Device), is the whole screen swipeable?** The
+   default thumbstick and jump button are turned off in `init.client`; if
+   a thumbstick still appears bottom-left, say so.
+6. **Output** should show `[Speed Cube] server ready` and no red text.
 
 ### Saving in Studio
 
