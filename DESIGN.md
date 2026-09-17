@@ -65,10 +65,12 @@ streak are the whole game.
 
 | | What | State |
 |---|---|---|
-| M1 | Pedestal ring, prompted solves, swipe + keys, combo, PERFECT, pop, coins, depth dial, leaderstats, saving | built, untested in Studio |
-| M2 | **Cube boxes** (the gacha): cube skins, stickerless / mirror / glow looks, per-cube turning sounds, small coin multiplier, rarity tiers. Arrow fade: at higher tiers the last moves are unprompted. Live cubes for spectators. | design |
-| M3 | Server sprints (same scramble for the lobby, first pop wins), global leaderboard (OrderedDataStore), daily streaks | design |
-| M4 | Trading, golden / rainbow variants, seasonal boxes, gamepasses (2x coins, extra box slots) | design |
+| M1 | Pedestal ring, prompted solves, swipe + keys, combo, PERFECT, pop, coins, depth dial, leaderstats, saving. Feel pass: arrow lane, combo streak, solve card, first-play nudge, one-press chained swipes. | **playing in Studio** (2026-09-17) |
+| M2 | **Cube boxes** (the gacha): cubes with a look, a turning sound and a small coin multiplier; rarity tiers; the hatch animation; a collection screen with one equipped cube. Live cubes for spectators. A lobby leaderboard board (server bests per depth). Robux plumbing (coin packs, box bundles) with blank product ids until tuned. | next |
+| M3 | Server sprints (same scramble for the lobby, first pop wins, a crown), global weekly leaderboard (OrderedDataStore), daily streak + daily quests paying boxes, **rebirth** (reset coins and depth for a permanent multiplier), arrow fade at high depth | design |
+| M4 | Gamepasses (2x coins, VIP cube), seasonal boxes with limited cubes, trading, golden / rainbow variants | design |
+
+**Decisions taken 2026-09-17 (CEO):** cubes DO have power (a coin multiplier, capped around +50% for the best); rebirth lands in M3 after boxes exist; the economy runs on coins only until it is tuned on real play, but the Robux purchase plumbing ships in M2 with blank product ids so it can be switched on without code; public release tentatively after M2; the name "Speed Cube" is a placeholder to revisit.
 
 ## Naming
 
