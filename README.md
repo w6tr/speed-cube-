@@ -37,6 +37,7 @@ arrow appears on it.
 | Do this | What happens |
 |---|---|
 | swipe (or press W A S D / arrow keys) the way the arrow points | that row or column turns, the next arrow appears |
+| keep the finger (or mouse button) down and change direction | the next swipe commits without lifting; a long swipe is still one swipe; the same direction twice needs a lift |
 | swipe the wrong way | the cube wobbles, the combo resets, swipes are ignored for 0.3s |
 | swipe the last arrow | the cube pops, coins are paid, a new cube shuffles in |
 | swipe within 0.35s of the last swipe | PERFECT (+1 coin each) |
@@ -96,8 +97,19 @@ All in `src/shared/Config.luau`:
 Loads the real `Moves.luau`, builds a 26-cubie cube the way the client
 does, and checks every inverse, every scramble/solution pair at depths
 1–15, and that each arrow points where the front row or column actually
-goes. It cannot see the 3D placement, the UI or the remotes; those still
-need Studio.
+goes.
+
+```bash
+~/.rokit/bin/lune run tools/test-swipe.luau
+```
+
+Drives the real `Swipe.luau` with scripted finger paths: flicks, long
+drags, reversals, corners, wobbles.
+
+Neither can see the 3D placement, the UI or the remotes. For those there
+is a real-engine loop: `rojo build` a place, then
+`~/.rokit/bin/run-in-roblox --place <it> --script <a smoke script>` runs
+the script inside a throwaway Studio window and prints its output here.
 
 ## Checks before every push
 

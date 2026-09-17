@@ -2,11 +2,14 @@
 --[[
 	Input.luau -- turns touches, mouse drags and keys into four directions.
 
-	A swipe COMMITS as soon as the finger has moved SwipeMinPixels, not
-	when it lifts, so a fast flick registers before it is over. Once a
-	touch has committed it cannot commit again until it lifts: one touch,
-	one swipe, no accidental doubles from a wobbly thumb. The direction is
-	whichever axis the finger moved most along.
+	The swipe rules live in Shared/Swipe.luau (pure maths, tested under
+	Lune). This file only wires Roblox's input events to it:
+
+	  * A touch or a held mouse button starts a tracker at that point.
+	  * Every movement while it is down is fed to the tracker; each
+	    direction it commits is handed to the game. One press can carry
+	    many swipes: right, then left, then up, without lifting.
+	  * Lifting ends the tracker.
 
 	On a keyboard the arrow keys and WASD do the same thing. Nothing here
 	knows about the cube; it only says "Up" / "Down" / "Left" / "Right".
@@ -18,13 +21,13 @@ local UserInputService = game:GetService("UserInputService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Moves = require(Shared.Moves)
+local Swipe = require(Shared.Swipe)
 
 local Input = {}
 
 type Active = {
 	input: InputObject,
-	start: Vector3,
-	consumed: boolean,
+	tracker: Swipe.Tracker,
 }
 
 local active: Active? = nil
@@ -74,27 +77,22 @@ function Input.start(onDirection: (Moves.Direction) -> ())
 			return
 		end
 		if isPointer(input) and not gameProcessed then
-			active = { input = input, start = input.Position, consumed = false }
+			active = {
+				input = input,
+				tracker = Swipe.begin(input.Position, Config.Input.SwipeMinPixels),
+			}
 		end
 	end)
 
 	UserInputService.InputChanged:Connect(function(input)
 		local current = active
-		if not current or current.consumed or not belongsToActive(input) then
+		if not current or not belongsToActive(input) then
 			return
 		end
-		local delta = input.Position - current.start
-		if delta.Magnitude < Config.Input.SwipeMinPixels then
-			return
+		local direction = Swipe.move(current.tracker, input.Position)
+		if direction then
+			onDirection(direction :: Moves.Direction)
 		end
-		current.consumed = true
-		local direction: Moves.Direction
-		if math.abs(delta.X) > math.abs(delta.Y) then
-			direction = if delta.X > 0 then "Right" else "Left"
-		else
-			direction = if delta.Y > 0 then "Down" else "Up" -- screen Y grows downward
-		end
-		onDirection(direction)
 	end)
 
 	UserInputService.InputEnded:Connect(function(input: InputObject)

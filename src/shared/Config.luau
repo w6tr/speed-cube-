@@ -179,7 +179,10 @@ Config.Lobby = {
 -- Input
 --------------------------------------------------------------------------------
 Config.Input = {
-	SwipeMinPixels = 22, -- a drag this long commits as a swipe (before the finger lifts)
+	-- A drag this long commits as a swipe, before the finger lifts. One
+	-- press can carry many swipes: after a commit the next one needs this
+	-- much travel in a NEW direction (see Shared/Swipe.luau).
+	SwipeMinPixels = 22,
 	Keys = {
 		Up = { Enum.KeyCode.Up, Enum.KeyCode.W },
 		Down = { Enum.KeyCode.Down, Enum.KeyCode.S },
