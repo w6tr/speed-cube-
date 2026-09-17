@@ -117,7 +117,22 @@ local function showPrompt()
 	cube.prompt(nextMove)
 	local def = if nextMove then Moves.get(nextMove) else nil
 	hud.setHint(if def then def.direction else nil, isTouch)
+	-- The lane: this arrow and the next few, so a fast player can chain.
+	local lane: { string } = {}
+	for i = 1, Config.Hud.LaneSize do
+		local name = current.solution[localStep + i]
+		local moveDef = if name then Moves.get(name) else nil
+		if moveDef then
+			table.insert(lane, moveDef.direction)
+		end
+	end
+	hud.setQueue(lane)
 end
+
+-- The first-play nudge: shown to a player with no solves until their
+-- first correct swipe.
+local firstPlay = false
+local nudged = false
 
 local function hideDisplayCube(index: number)
 	task.spawn(function()
@@ -152,6 +167,8 @@ local function startDeal(current: Remotes.Deal)
 	pending = {}
 	hud.setStep(localStep, current.depth)
 	hud.resetClock()
+	hud.hideCard()
+	hud.setQueue({})
 	if cube then
 		cube.prompt(nil)
 	end
@@ -213,6 +230,10 @@ local function onDirection(direction: Moves.Direction)
 		if localStep == 0 then
 			hud.startClock()
 		end
+		if firstPlay then
+			firstPlay = false
+			hud.setTutorial(false, isTouch)
+		end
 		localStep += 1
 		view.turn(expected.name)
 		hud.setStep(localStep, current.depth)
@@ -220,6 +241,7 @@ local function onDirection(direction: Moves.Direction)
 			awaitingSolve = true
 			view.prompt(nil)
 			hud.setHint(nil, isTouch)
+			hud.setQueue({})
 			-- If the server never confirms (a dropped packet, a desync), ask
 			-- for the truth rather than sit here forever.
 			task.delay(Config.Timing.ResyncAfter, function()
@@ -232,6 +254,7 @@ local function onDirection(direction: Moves.Direction)
 		end
 	else
 		view.shake()
+		view.flashWrong()
 		lockUntil = os.clock() + Config.Timing.WrongLockSeconds
 		hud.setCombo(0)
 	end
@@ -261,6 +284,11 @@ Remotes.get(N.Sync).OnClientEvent:Connect(function(state: Remotes.SyncState)
 		hideDisplayCube(state.pedestalIndex)
 	end
 	hud.set(state)
+	if not nudged and state.solves == 0 then
+		nudged = true
+		firstPlay = true
+		hud.setTutorial(true, isTouch)
+	end
 
 	local incoming = state.deal
 	if not incoming then
@@ -298,6 +326,12 @@ Remotes.get(N.MoveResult).OnClientEvent:Connect(function(result: Remotes.MoveRes
 			cube.sound("Perfect")
 		end
 	end
+	if result.ok and result.combo > 0 and result.combo % Config.Hud.ComboChimeEvery == 0 then
+		toasts.show("big", `{result.combo} COMBO`)
+		if cube then
+			cube.sound("Coin")
+		end
+	end
 end)
 
 Remotes.get(N.Solved).OnClientEvent:Connect(function(result: Remotes.SolveResult)
@@ -314,20 +348,8 @@ Remotes.get(N.Solved).OnClientEvent:Connect(function(result: Remotes.SolveResult
 	end
 	hud.stopClock(result.seconds)
 	hud.addCoins(result.coins)
-	local bits = { `+{result.coins} coins` }
-	if result.mult > 1 then
-		table.insert(bits, string.format("x%.1f combo", result.mult))
-	end
-	if result.fast then
-		table.insert(bits, "FAST")
-	end
-	if result.perfects > 0 then
-		table.insert(bits, `{result.perfects} perfect`)
-	end
-	toasts.show("coins", table.concat(bits, "   "))
-	if result.isBest then
-		toasts.show("big", string.format("NEW BEST  %.2fs", result.seconds))
-	end
+	hud.showCard(result)
+	CameraRig.punch()
 end)
 
 Remotes.get(N.Toast).OnClientEvent:Connect(function(kind: string, text: string)

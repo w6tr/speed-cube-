@@ -36,7 +36,7 @@ function Toasts.build(): Api
 	local column = Instance.new("Frame")
 	column.Name = "Column"
 	column.Size = UDim2.new(0, 460, 0, 220)
-	column.Position = UDim2.new(0.5, -230, 0, 130) -- below the BEST line under the timer
+	column.Position = UDim2.new(0.5, -230, 0, 190) -- below the arrow lane and the BEST line
 	column.BackgroundTransparency = 1
 	column.Parent = gui
 	local layout = Theme.list(column, 6)

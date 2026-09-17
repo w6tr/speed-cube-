@@ -35,6 +35,7 @@ export type Api = {
 	isBusy: () -> boolean,
 	pop: () -> (),
 	shake: () -> (),
+	flashWrong: () -> (),
 	sound: (name: string) -> (),
 }
 
@@ -329,6 +330,23 @@ function CubeView.build(root: CFrame): Api
 		end
 	end
 
+	-- The arrow goes red for a moment on a wrong swipe.
+	local flashToken = 0
+	local function flashWrong()
+		flashToken += 1
+		local token = flashToken
+		for _, g in glyphs do
+			g.TextColor3 = A.WrongColor
+		end
+		task.delay(A.WrongFlashSeconds, function()
+			if token == flashToken then
+				for _, g in glyphs do
+					g.TextColor3 = A.Color
+				end
+			end
+		end)
+	end
+
 	local function prompt(move: string?)
 		local def = if move then Moves.get(move) else nil
 		if not def then
@@ -459,6 +477,7 @@ function CubeView.build(root: CFrame): Api
 		isBusy = isBusy,
 		pop = pop,
 		shake = shake,
+		flashWrong = flashWrong,
 		sound = sound,
 	}
 end

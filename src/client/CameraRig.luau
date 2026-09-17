@@ -7,6 +7,8 @@
 	front (where the arrows are), the top and the right. It is re-applied
 	every frame because Roblox likes to take the camera back when the
 	character respawns.
+
+	`punch` nudges the camera toward the cube for a moment (the pop).
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -18,17 +20,26 @@ local CameraRig = {}
 
 local target: CFrame? = nil
 local connection: RBXScriptConnection? = nil
+local punchUntil = 0
 
 local function apply()
 	local camera = workspace.CurrentCamera
-	if not camera or not target then
+	local base = target
+	if not camera or not base then
 		return
 	end
 	if camera.CameraType ~= Enum.CameraType.Scriptable then
 		camera.CameraType = Enum.CameraType.Scriptable
 	end
 	camera.FieldOfView = Config.Camera.FieldOfView
-	camera.CFrame = target
+	local remaining = punchUntil - os.clock()
+	if remaining > 0 then
+		-- forward along the look direction, easing back out
+		local a = remaining / Config.Camera.PunchSeconds
+		camera.CFrame = base * CFrame.new(0, 0, -Config.Camera.PunchStuds * a)
+	else
+		camera.CFrame = base
+	end
 end
 
 --[[
@@ -42,6 +53,10 @@ function CameraRig.lockTo(pedestal: CFrame)
 	if not connection then
 		connection = RunService.RenderStepped:Connect(apply)
 	end
+end
+
+function CameraRig.punch()
+	punchUntil = os.clock() + Config.Camera.PunchSeconds
 end
 
 return CameraRig

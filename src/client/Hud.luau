@@ -1,13 +1,22 @@
 --!strict
 --[[
-	Hud.luau -- coins, the timer, the combo, the depth dial and the hint.
+	Hud.luau -- coins, the timer, the arrow lane, the combo, the solve
+	card, the first-play nudge, the depth dial.
 
 	Laid out for 1280x720 and scaled by Theme.screen. Nothing here decides
 	anything; it shows what init.client tells it.
+
+	Top row:      coins (left)   timer + step (centre)   combo (right)
+	Under timer:  the ARROW LANE -- the current arrow big, the next two
+	              small, so a fast player can chain instead of reading one
+	              at a time (the note lane of a rhythm game)
+	Centre:       the solve card (between cubes) / the first-play nudge
+	Bottom:       the hint (centre) and the depth dial (right)
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
@@ -25,7 +34,11 @@ export type Api = {
 	set: (state: Remotes.SyncState) -> (),
 	setStep: (step: number, depth: number) -> (),
 	setCombo: (combo: number) -> (),
+	setQueue: (directions: { string }) -> (),
 	setHint: (direction: string?, isTouch: boolean) -> (),
+	setTutorial: (on: boolean, isTouch: boolean) -> (),
+	showCard: (result: Remotes.SolveResult) -> (),
+	hideCard: () -> (),
 	startClock: () -> (),
 	stopClock: (seconds: number) -> (),
 	resetClock: () -> (),
@@ -44,10 +57,26 @@ local function comboMult(combo: number): number
 	return math.min(Config.Combo.MaxMult, 1 + Config.Combo.MultPerCombo * combo)
 end
 
+-- The streak's colour climbs through tiers so a long combo LOOKS hotter.
+local function comboColor(combo: number): Color3
+	local tiers = Config.Hud.ComboTiers
+	local color = Theme.Colors.Good
+	for _, tier in tiers do
+		if combo >= tier.At then
+			color = tier.Color
+		end
+	end
+	return color
+end
+
 function Hud.build(parent: Instance, callbacks: Callbacks): Api
 	local C = Theme.Colors
+	local H = Config.Hud
 
-	-- Coins, top-left
+	----------------------------------------------------------------------------
+	-- Top row
+	----------------------------------------------------------------------------
+
 	local coinBox = Theme.frame(parent, "Coins", UDim2.new(0, 200, 0, 48), UDim2.new(0, 16, 0, 12))
 	Theme.padding(coinBox, 10)
 	local coinLabel =
@@ -56,7 +85,6 @@ function Hud.build(parent: Instance, callbacks: Callbacks): Api
 		})
 	local shownCoins = 0
 
-	-- Timer, top-centre
 	local timerBox =
 		Theme.frame(parent, "Timer", UDim2.new(0, 260, 0, 84), UDim2.new(0.5, -130, 0, 12))
 	local timerLabel =
@@ -69,12 +97,59 @@ function Hud.build(parent: Instance, callbacks: Callbacks): Api
 			align = Enum.TextXAlignment.Center,
 			color = C.InkSoft,
 		})
+
+	local comboBox =
+		Theme.frame(parent, "Combo", UDim2.new(0, 220, 0, 48), UDim2.new(1, -236, 0, 12))
+	Theme.padding(comboBox, 10)
+	local comboStroke = Theme.stroke(comboBox, C.Good, 0)
+	local comboScale = Instance.new("UIScale")
+	comboScale.Parent = comboBox
+	local comboLabel =
+		Theme.label(comboBox, "Value", "", UDim2.new(1, 0, 1, 0), UDim2.new(0, 0, 0, 0), 20, {
+			align = Enum.TextXAlignment.Right,
+			color = C.Good,
+		})
+
+	----------------------------------------------------------------------------
+	-- The arrow lane
+	----------------------------------------------------------------------------
+
+	local lane = Instance.new("Frame")
+	lane.Name = "Lane"
+	lane.Size = UDim2.new(0, 260, 0, H.LaneHeight)
+	lane.Position = UDim2.new(0.5, -130, 0, 102)
+	lane.BackgroundTransparency = 1
+	lane.Parent = parent
+	local laneLayout = Theme.list(lane, 14, true)
+	laneLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	laneLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+
+	local laneGlyphs: { TextLabel } = {}
+	for i = 1, H.LaneSize do
+		local big = i == 1
+		local g = Theme.label(
+			lane,
+			`Arrow{i}`,
+			"",
+			UDim2.new(0, if big then 56 else 34, 1, 0),
+			UDim2.new(0, 0, 0, 0),
+			if big then H.LaneBigSize else H.LaneSmallSize,
+			{
+				align = Enum.TextXAlignment.Center,
+				font = Enum.Font.GothamBlack,
+				color = if big then C.Ink else C.InkSoft,
+			}
+		)
+		g.LayoutOrder = i
+		table.insert(laneGlyphs, g)
+	end
+
 	local bestLabel = Theme.label(
 		parent,
 		"Best",
 		"",
-		UDim2.new(0, 260, 0, 22),
-		UDim2.new(0.5, -130, 0, 100),
+		UDim2.new(0, 300, 0, 22),
+		UDim2.new(0.5, -150, 0, 102 + H.LaneHeight),
 		14,
 		{
 			align = Enum.TextXAlignment.Center,
@@ -82,17 +157,10 @@ function Hud.build(parent: Instance, callbacks: Callbacks): Api
 		}
 	)
 
-	-- Combo, top-right
-	local comboBox =
-		Theme.frame(parent, "Combo", UDim2.new(0, 200, 0, 48), UDim2.new(1, -216, 0, 12))
-	Theme.padding(comboBox, 10)
-	local comboLabel =
-		Theme.label(comboBox, "Value", "", UDim2.new(1, 0, 1, 0), UDim2.new(0, 0, 0, 0), 20, {
-			align = Enum.TextXAlignment.Right,
-			color = C.Good,
-		})
+	----------------------------------------------------------------------------
+	-- Hint, nudge, dial
+	----------------------------------------------------------------------------
 
-	-- Hint, bottom-centre
 	local hintLabel = Theme.label(
 		parent,
 		"Hint",
@@ -106,7 +174,17 @@ function Hud.build(parent: Instance, callbacks: Callbacks): Api
 		}
 	)
 
-	-- Depth dial, bottom-right
+	local nudge =
+		Theme.frame(parent, "Nudge", UDim2.new(0, 560, 0, 64), UDim2.new(0.5, -280, 1, -200))
+	Theme.stroke(nudge, C.Perfect, 2)
+	local nudgeLabel =
+		Theme.label(nudge, "Text", "", UDim2.new(1, 0, 1, 0), UDim2.new(0, 0, 0, 0), 24, {
+			align = Enum.TextXAlignment.Center,
+			font = Enum.Font.GothamBlack,
+			color = C.Perfect,
+		})
+	nudge.Visible = false
+
 	local dial = Theme.frame(parent, "Depth", UDim2.new(0, 250, 0, 56), UDim2.new(1, -266, 1, -72))
 	Theme.padding(dial, 8)
 	local minus = Theme.button(
@@ -135,6 +213,34 @@ function Hud.build(parent: Instance, callbacks: Callbacks): Api
 			callbacks.depth(1)
 		end
 	)
+
+	----------------------------------------------------------------------------
+	-- The solve card
+	----------------------------------------------------------------------------
+
+	local card =
+		Theme.frame(parent, "Card", UDim2.new(0, 360, 0, 150), UDim2.new(0.5, -180, 0.5, -160))
+	Theme.stroke(card, C.Coin, 2)
+	Theme.padding(card, 12)
+	local cardTime =
+		Theme.label(card, "Time", "", UDim2.new(1, 0, 0, 56), UDim2.new(0, 0, 0, 0), 46, {
+			align = Enum.TextXAlignment.Center,
+			font = Enum.Font.GothamBlack,
+		})
+	local cardCoins =
+		Theme.label(card, "Coins", "", UDim2.new(1, 0, 0, 34), UDim2.new(0, 0, 0, 56), 26, {
+			align = Enum.TextXAlignment.Center,
+			font = Enum.Font.GothamBlack,
+			color = C.Coin,
+		})
+	local cardLine =
+		Theme.label(card, "Line", "", UDim2.new(1, 0, 0, 30), UDim2.new(0, 0, 0, 92), 16, {
+			align = Enum.TextXAlignment.Center,
+			color = C.InkSoft,
+		})
+	local cardScale = Instance.new("UIScale")
+	cardScale.Parent = card
+	card.Visible = false
 
 	----------------------------------------------------------------------------
 	-- The clock
@@ -176,17 +282,37 @@ function Hud.build(parent: Instance, callbacks: Callbacks): Api
 	-- Setters
 	----------------------------------------------------------------------------
 
+	local lastCombo = 0
 	local function setCombo(combo: number)
+		local color = comboColor(combo)
+		comboLabel.TextColor3 = color
+		comboStroke.Color = color
+		comboStroke.Thickness = if combo > 0
+			then math.min(H.ComboStrokeMax, combo / H.ComboStrokePer)
+			else 0
 		if combo <= 0 then
 			comboLabel.Text = ""
-			return
+		else
+			comboLabel.Text = string.format("COMBO %d   x%.1f", combo, comboMult(combo))
 		end
-		local mult = comboMult(combo)
-		comboLabel.Text = string.format("COMBO %d   x%.1f", combo, mult)
+		if combo > lastCombo then
+			-- a little punch on every hit, so the streak is felt
+			comboScale.Scale = H.ComboPunch
+			TweenService
+				:Create(comboScale, TweenInfo.new(0.15, Enum.EasingStyle.Quad), { Scale = 1 })
+				:Play()
+		end
+		lastCombo = combo
 	end
 
 	local function setStep(step: number, depth: number)
 		stepLabel.Text = `{step} / {depth} moves`
+	end
+
+	local function setQueue(directions: { string })
+		for i, g in laneGlyphs do
+			g.Text = ARROWS[directions[i] or ""] or ""
+		end
 	end
 
 	local function setHint(direction: string?, isTouch: boolean)
@@ -198,6 +324,13 @@ function Hud.build(parent: Instance, callbacks: Callbacks): Api
 		hintLabel.Text = if isTouch then `SWIPE {arrow}` else `{arrow}   {KEYS[direction]}`
 	end
 
+	local function setTutorial(on: boolean, isTouch: boolean)
+		nudge.Visible = on
+		nudgeLabel.Text = if isTouch
+			then "SWIPE THE WAY THE ARROW POINTS"
+			else "PRESS THE ARROW KEY THE ARROW POINTS"
+	end
+
 	local function setCoins(n: number)
 		shownCoins = n
 		coinLabel.Text = `{n} coins`
@@ -205,6 +338,34 @@ function Hud.build(parent: Instance, callbacks: Callbacks): Api
 
 	local function addCoins(n: number)
 		setCoins(shownCoins + n)
+	end
+
+	local function showCard(result: Remotes.SolveResult)
+		cardTime.Text = string.format("%.2fs", result.seconds)
+		cardTime.TextColor3 = if result.isBest then C.Perfect else C.Ink
+		cardCoins.Text = `+{result.coins} coins`
+		local bits = {}
+		if result.isBest then
+			table.insert(bits, "NEW BEST")
+		end
+		if result.fast then
+			table.insert(bits, "FAST")
+		end
+		if result.perfects > 0 then
+			table.insert(bits, `{result.perfects} PERFECT`)
+		end
+		if result.mult > 1 then
+			table.insert(bits, string.format("x%.1f combo", result.mult))
+		end
+		cardLine.Text = table.concat(bits, "   ")
+		card.Visible = true
+		cardScale.Scale = 0.7
+		TweenService:Create(cardScale, TweenInfo.new(0.2, Enum.EasingStyle.Back), { Scale = 1 })
+			:Play()
+	end
+
+	local function hideCard()
+		card.Visible = false
 	end
 
 	local function set(state: Remotes.SyncState)
@@ -225,7 +386,11 @@ function Hud.build(parent: Instance, callbacks: Callbacks): Api
 		set = set,
 		setStep = setStep,
 		setCombo = setCombo,
+		setQueue = setQueue,
 		setHint = setHint,
+		setTutorial = setTutorial,
+		showCard = showCard,
+		hideCard = hideCard,
 		startClock = startClock,
 		stopClock = stopClock,
 		resetClock = resetClock,

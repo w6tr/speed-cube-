@@ -114,6 +114,8 @@ Config.Cube = {
 	Arrow = {
 		Offset = 0.18, -- studs in front of the face
 		Color = Color3.fromRGB(255, 255, 255),
+		WrongColor = Color3.fromRGB(255, 70, 70), -- the arrow flashes this on a wrong swipe
+		WrongFlashSeconds = 0.25,
 		PulseSeconds = 0.6,
 		TextSize = 120,
 	},
@@ -130,6 +132,29 @@ Config.Cube = {
 Config.Camera = {
 	Offset = Vector3.new(3.4, 4.6, 7.2), -- from the cube centre, in pedestal space
 	FieldOfView = 55,
+	PunchStuds = 0.5, -- the camera dips toward the cube by this on a solve
+	PunchSeconds = 0.18,
+}
+
+--------------------------------------------------------------------------------
+-- Hud: the arrow lane, the combo streak, the solve card
+--------------------------------------------------------------------------------
+Config.Hud = {
+	LaneSize = 3, -- the current arrow plus this many minus one upcoming
+	LaneHeight = 56,
+	LaneBigSize = 44, -- text size of the current arrow
+	LaneSmallSize = 26, -- and of the upcoming ones
+	ComboPunch = 1.25, -- the combo box scales to this on every hit
+	ComboStrokePer = 5, -- glow thickness = combo / this ...
+	ComboStrokeMax = 4, -- ... capped here
+	ComboChimeEvery = 10, -- a chime every N combo
+	-- The streak's colour by size. Tiers are checked in order; the last
+	-- one the combo reaches wins.
+	ComboTiers = {
+		{ At = 10, Color = Color3.fromRGB(231, 174, 58) }, -- gold
+		{ At = 20, Color = Color3.fromRGB(255, 130, 60) }, -- orange
+		{ At = 30, Color = Color3.fromRGB(255, 80, 120) }, -- hot pink
+	},
 }
 
 --------------------------------------------------------------------------------
