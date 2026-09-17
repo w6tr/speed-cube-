@@ -20,9 +20,16 @@ Studio plugin.
 ~/.rokit/bin/rojo serve
 ```
 
-Then in Studio: **new Baseplate** -> **Plugins -> Rojo -> Connect** -> **Play**.
-(The game removes the template's baseplate and spawn and builds its own
-lobby; nothing in the place file matters.)
+Then in Studio: open the **published** Speed Cube place -> **Plugins -> Rojo
+-> Connect** -> **Play**. (The game removes the template's baseplate and
+spawn and builds its own lobby; nothing in the place file matters.)
+
+**The place must be published** (File -> Publish to Roblox As -> a private
+experience of your own). On the current Studio, an unpublished place or a
+local `.rbxl` makes Studio try to join a Team Create session for universe 0,
+fail, and kick the play-test client 0.3 s in: the game freezes on its first
+frame with dead inputs and the Output shows `Disconnect from 127.0.0.1|...`.
+This cost an afternoon on 2026-09-17; it is not a bug in the game.
 
 You appear behind a pedestal with a cube on it. The cube shuffles, then an
 arrow appears on it.

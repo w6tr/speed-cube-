@@ -172,6 +172,7 @@ Config.Input = {
 	its own turning sound (M2).
 ]]
 Config.Sounds = {
+	-- An empty id means "no sound".
 	Turn = "rbxasset://sounds/switch.wav",
 	Perfect = "rbxasset://sounds/snap.wav",
 	Wrong = "rbxasset://sounds/uuhhh.mp3",

@@ -123,12 +123,17 @@ function CubeView.build(root: CFrame): Api
 
 	local sounds: { [string]: Sound } = {}
 	for _, name in { "Turn", "Perfect", "Wrong", "Solve", "Coin" } do
-		local s = Instance.new("Sound")
-		s.Name = `Cube{name}`
-		s.SoundId = (Config.Sounds :: any)[name]
-		s.Volume = if name == "Solve" then Config.Sounds.SolveVolume else Config.Sounds.TurnVolume
-		s.Parent = SoundService
-		sounds[name] = s
+		local id = (Config.Sounds :: any)[name]
+		if type(id) == "string" and id ~= "" then
+			local s = Instance.new("Sound")
+			s.Name = `Cube{name}`
+			s.SoundId = id
+			s.Volume = if name == "Solve"
+				then Config.Sounds.SolveVolume
+				else Config.Sounds.TurnVolume
+			s.Parent = SoundService
+			sounds[name] = s
+		end
 	end
 
 	local function sound(name: string)

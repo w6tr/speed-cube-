@@ -61,8 +61,11 @@ end
 function Input.start(onDirection: (Moves.Direction) -> ())
 	UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		if input.UserInputType == Enum.UserInputType.Keyboard then
-			if gameProcessed then
-				return -- typing in chat
+			-- Roblox's own character controls claim WASD and the arrows first
+			-- and mark them "processed"; we want them anyway. The only time
+			-- to step aside is when the player is typing in a text box.
+			if UserInputService:GetFocusedTextBox() then
+				return
 			end
 			local direction: Moves.Direction? = keyToDirection[input.KeyCode]
 			if direction then
