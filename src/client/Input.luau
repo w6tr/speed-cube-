@@ -32,6 +32,13 @@ type Active = {
 
 local active: Active? = nil
 
+local swipeOptions: Swipe.Options = {
+	minPixels = Config.Input.SwipeMinPixels,
+	chainPixels = Config.Input.ChainPixels,
+	chainCooldown = Config.Input.ChainCooldown,
+	axisRatio = Config.Input.AxisRatio,
+}
+
 local keyToDirection: { [Enum.KeyCode]: Moves.Direction } = {}
 local function bind(direction: Moves.Direction, keys: { Enum.KeyCode })
 	for _, key in keys do
@@ -79,7 +86,7 @@ function Input.start(onDirection: (Moves.Direction) -> ())
 		if isPointer(input) and not gameProcessed then
 			active = {
 				input = input,
-				tracker = Swipe.begin(input.Position, Config.Input.SwipeMinPixels),
+				tracker = Swipe.begin(input.Position, swipeOptions),
 			}
 		end
 	end)
@@ -89,7 +96,7 @@ function Input.start(onDirection: (Moves.Direction) -> ())
 		if not current or not belongsToActive(input) then
 			return
 		end
-		local direction = Swipe.move(current.tracker, input.Position)
+		local direction = Swipe.move(current.tracker, input.Position, os.clock())
 		if direction then
 			onDirection(direction :: Moves.Direction)
 		end

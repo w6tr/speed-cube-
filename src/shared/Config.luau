@@ -179,10 +179,19 @@ Config.Lobby = {
 -- Input
 --------------------------------------------------------------------------------
 Config.Input = {
-	-- A drag this long commits as a swipe, before the finger lifts. One
-	-- press can carry many swipes: after a commit the next one needs this
-	-- much travel in a NEW direction (see Shared/Swipe.luau).
-	SwipeMinPixels = 22,
+	-- The first swipe of a press commits after this much travel, before
+	-- the finger lifts. (Shared/Swipe.luau has the rules.)
+	SwipeMinPixels = 36,
+	-- One press can carry many swipes. A chained swipe (same press, after
+	-- a commit) needs this much travel in a NEW direction ...
+	ChainPixels = 54,
+	-- ... and nothing counts for this long after a commit: the tail of a
+	-- real swipe, where the hand slows and curls, must not read as a
+	-- second swipe.
+	ChainCooldown = 0.12,
+	-- A move only counts when the bigger axis is at least this many times
+	-- the other; diagonals wait until they resolve.
+	AxisRatio = 1.4,
 	Keys = {
 		Up = { Enum.KeyCode.Up, Enum.KeyCode.W },
 		Down = { Enum.KeyCode.Down, Enum.KeyCode.S },
