@@ -30,7 +30,7 @@ export type Tracker = {
 }
 
 -- Screen space: +X right, +Y DOWN.
-local AXIS: { [Direction]: Vector3 } = {
+local AXIS: { [string]: Vector3 } = {
 	Right = Vector3.new(1, 0, 0),
 	Left = Vector3.new(-1, 0, 0),
 	Down = Vector3.new(0, 1, 0),
