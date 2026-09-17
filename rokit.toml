@@ -1,0 +1,9 @@
+# Pinned tool versions so both machines run identical binaries.
+# Bump these deliberately, together, in their own commit.
+
+[tools]
+rojo = "rojo-rbx/rojo@7.4.4"
+stylua = "JohnnyMorganz/StyLua@0.20.0"
+selene = "Kampfkarren/selene@0.27.1"
+luau-lsp = "JohnnyMorganz/luau-lsp@1.69.0"
+lune = "lune-org/lune@0.10.5"

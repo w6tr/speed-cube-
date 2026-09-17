@@ -1,0 +1,47 @@
+{
+  "name": "speedcube",
+  "tree": {
+    "$className": "DataModel",
+
+    "ReplicatedStorage": {
+      "Shared": {
+        "$path": "src/shared"
+      }
+    },
+
+    "ServerScriptService": {
+      "Server": {
+        "$path": "src/server"
+      }
+    },
+
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "Client": {
+          "$path": "src/client"
+        }
+      },
+      "$properties": {
+        "CharacterWalkSpeed": 0,
+        "CharacterJumpPower": 0,
+        "EnableMouseLockOption": false
+      }
+    },
+
+    "Workspace": {
+      "$properties": {
+        "Gravity": 196.2,
+        "FallenPartsDestroyHeight": -200
+      }
+    },
+
+    "Lighting": {
+      "$properties": {
+        "ClockTime": 14,
+        "Brightness": 2,
+        "Ambient": [0.5, 0.5, 0.55],
+        "OutdoorAmbient": [0.6, 0.6, 0.65]
+      }
+    }
+  }
+}

@@ -1,0 +1,19 @@
+# NEVER commit the place file. Git cannot merge binaries -- it will silently
+# keep one person's world and throw the other's away. See the setup doc.
+*.rbxl
+*.rbxlx
+*.rbxl.lock
+*.rbxlx.lock
+*.rbxm
+*.rbxmx
+
+# Rokit / tooling
+/.rokit/
+/roblox.toml
+/sourcemap.json
+/globalTypes.d.luau
+
+# Editor + OS noise
+.DS_Store
+Thumbs.db
+/.vscode/settings.local.json

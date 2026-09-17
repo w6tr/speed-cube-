@@ -1,0 +1,10 @@
+# Force LF everywhere. StyLua writes Unix line endings (stylua.toml), so
+# without this git hands each machine CRLF working copies and every formatted
+# file shows up as fully rewritten in the diff -- on both your machines, in
+# opposite directions, forever.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.rbxl binary
+*.rbxm binary
