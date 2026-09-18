@@ -256,24 +256,36 @@ Config.Look = {
 	it is.
 
 	The camera is locked (CameraRig re-applies it every frame, so nobody
-	can look around). It sits 23.5 studs out from the middle at y = 9.1
-	and looks DOWN at the cube by 30 degrees; the field of view is 55, so
-	the TOP edge of the picture is already 2.5 degrees BELOW the horizon.
-	The frame's ceiling therefore drops one stud for every 23 studs of
-	distance: about y = 7 across the hall, y = 6.3 at the back wall.
+	can look around). It sits 23.5 studs out from the middle, at
+	Lobby.PedestalHeight + Cube.Height + Camera.Offset.Y -- 9.25 studs as
+	those three are set today, and it MOVES when any of them does -- and
+	looks DOWN at the cube by 30 degrees. The field of view is 55, so the
+	TOP edge of the picture is already 2.5 degrees BELOW the horizon and
+	the frame's ceiling drops a stud for every 23 studs of distance. The
+	engine measures the middle of that edge landing at y = 6.77, 56 studs
+	out, on the fourth row of seating.
 
-	So the detail budget goes into the band from the floor to `SeenHeight`
-	-- the floor itself, the barrier boards, the front rows of seating --
-	and everything above it (the wall's upper half, the truss, the lamps)
-	is built cheap, because it is only ever seen in a free-camera shot for
-	the store icon.
+	The CORNERS of a wide screen fall away more slowly and reach y = 8.46
+	on an ultrawide. (Roblox's field of view is vertical: a phone sees the
+	same height and less width, so phones are the safe case.) So
+	`SeenHeight` is the height below which detail is worth BUILDING, not a
+	promise that nothing above it is ever seen -- the wall stays 17 studs
+	tall to cover that corner, and the first second of a session before
+	CameraRig takes the camera over.
+
+	The detail budget goes into the band from the floor to `SeenHeight`:
+	the floor itself, the barrier boards, the rows of seating. Everything
+	above it -- the wall's upper half, the truss, the lamps -- is built
+	cheap, because in play it is only glimpsed before the first Sync and
+	then seen again in a free-camera shot for the store icon.
 
 	Radii, from the middle out:
 	   0     the leaderboard board (kept under 5 studs, see Config.Board)
-	  16     the ring of stations (Config.Lobby.Radius)
+	  16     the ring of stations (Config.Lobby.Radius), and the truss
+	         above them
 	  23.5   every player's camera
 	  27     the barrier boards around the competition floor
-	  29-40  the seating
+	  29-36  the seating, raised on a platform so the boards do not hide it
 	  41     the back wall
 ]]
 Config.Arena = {
@@ -320,14 +332,20 @@ Config.Arena = {
 	-- so they are built as concentric cylinders rather than real steps.
 	Stands = {
 		InnerRadius = 29,
-		Rows = 4, -- the fifth would be above SeenHeight anyway
+		Rows = 4,
 		Segments = 24,
 		RowDepth = 2.2,
-		RowRise = 1.25,
+		-- The bank stands on a platform. Without one the first rows are
+		-- SHORTER than the hoardings in front of them and nobody ever sees
+		-- them: a sightline grazing the boards passes y = 2.3 by the time it
+		-- reaches the seating, so a row has to top out above that.
+		Base = 3.6,
+		RowRise = 1.15,
 		Color = Color3.fromRGB(26, 29, 38),
 		AltColor = Color3.fromRGB(33, 37, 48),
 		SeatColor = Color3.fromRGB(46, 53, 70),
 		Seats = 28, -- little blocks along the front row, to give the bank a scale
+		SeatRise = 0.45,
 	},
 
 	Wall = {
@@ -342,7 +360,9 @@ Config.Arena = {
 
 	-- Above the frame in play; there for the store shots.
 	Truss = {
-		Radius = 19,
+		-- Straight over the ring, so the lamp rods meet it instead of
+		-- hanging from nothing in a free-camera shot.
+		Radius = 16,
 		Height = 14.5,
 		Segments = 24,
 		Thickness = 0.45,
@@ -365,7 +385,9 @@ Config.Arena = {
 	-- timer pads in front of the cube, and a pool of light on the floor.
 	Station = {
 		MatColor = Color3.fromRGB(26, 92, 72), -- competition mat green
-		MatSize = 3.8,
+		-- Just inside the plinth trim ring (radius 1.75) so the station LED
+		-- still shows all the way round.
+		MatSize = 3.4,
 		MatThickness = 0.08,
 		-- The timer pads and the station number are PAINTED on the mat, not
 		-- built out of parts. At full pop the cube swells down to within a
@@ -375,10 +397,14 @@ Config.Arena = {
 		PadRingColor = Color3.fromRGB(72, 190, 255),
 		PadDiameter = 0.3, -- of the mat, across
 		PadSpread = 0.19, -- each pad this far from the middle of the mat
-		PadForward = 0.74, -- 0 is the inward edge, 1 the edge nearest the player
+		-- Rows down the mat. 0 is the edge nearest the player, 1 the far
+		-- edge: the pads sit under the player's own camera, the number at the
+		-- far end where the rest of the hall reads it.
+		PadRow = 0.26,
+		NumberRow = 0.8,
 		NumberColor = Color3.fromRGB(150, 210, 255),
 		NumberSize = 34,
-		GlowRadius = 4.6, -- the lit pool on the floor under the station
+		GlowRadius = 3.0, -- the lit pool on the floor under the station
 		GlowColor = Color3.fromRGB(96, 150, 230),
 		GlowTransparency = 0.86,
 		LightColor = Color3.fromRGB(150, 190, 255),

@@ -36,9 +36,34 @@ local SolveService = require(script.Services.SolveService)
 -- World and services
 --------------------------------------------------------------------------------
 
-Look.apply()
+--[[
+	Run a piece of DECORATION. If it throws, the game carries on without
+	it: the hall was a grey slab under a flat sun until last week and was
+	perfectly playable, so nothing in the art is worth a black void and
+	eight players with no cube. Everything below the decoration is
+	load-bearing and is left to throw.
+
+	The inner function returns a string only so there is a second value to
+	catch the error in -- Luau types pcall of a function that returns
+	nothing as handing back the boolean alone.
+]]
+local function decorate(what: string, build: () -> ())
+	local ok, err = pcall(function(): string
+		build()
+		return ""
+	end)
+	if not ok then
+		warn(`[Speed Cube] {what} did not build: {err}`)
+	end
+end
+
+decorate("the lighting rig", Look.apply)
+
 local world = LobbyBuilder.build()
-Arena.build(world.folder, world.pedestals)
+
+decorate("the hall", function()
+	Arena.build(world.folder, world.pedestals)
+end)
 Leaderboard.build(world.folder)
 SolveService.init(world.pedestals)
 CubeService.init({

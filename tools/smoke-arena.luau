@@ -146,45 +146,49 @@ for i, pedestal in pedestals do
 			.. (if #touching > 0 then ` (hit {table.concat(names, ", ")})` else "")
 	)
 
-	-- 4. where does the TOP edge of the picture land?
+	-- 4. where does the top of the picture land? Not just the middle of it.
+	-- Roblox's FieldOfView is VERTICAL, so a narrow phone screen sees the
+	-- same height and less width -- narrow is always the safe case -- but
+	-- the top CORNERS of a wide screen look along rays that fall away more
+	-- slowly than the centre ray, and so see further up the far wall.
+	-- Ultrawide is the worst case and it is the one that decides how tall
+	-- the wall has to be, so it is the one measured.
 	local half = math.rad(Config.Camera.FieldOfView / 2)
-	local up = (camera * CFrame.Angles(half, 0, 0)).LookVector
-	local hit = workspace:Raycast(eye, up * 400, ignore)
-	if hit then
-		lowest = math.min(lowest, hit.Position.Y)
-		highest = math.max(highest, hit.Position.Y)
-		if i == 1 then
-			print(
-				string.format(
-					"  top of frame lands on %s at y = %.2f, %.0f studs out",
-					hit.Instance.Name,
-					hit.Position.Y,
-					(hit.Position - eye).Magnitude
+	local widest = math.atan(math.tan(half) * 32 / 9)
+	for _, yaw in { 0, -widest, widest } do
+		local aim = camera * CFrame.Angles(half, yaw, 0)
+		local hit = workspace:Raycast(eye, aim.LookVector * 500, ignore)
+		if hit then
+			lowest = math.min(lowest, hit.Position.Y)
+			highest = math.max(highest, hit.Position.Y)
+			if i == 1 and yaw == 0 then
+				print(
+					string.format(
+						"  centre of the top edge lands on %s at y = %.2f, %.0f studs out",
+						hit.Instance.Name,
+						hit.Position.Y,
+						(hit.Position - eye).Magnitude
+					)
 				)
-			)
+			end
+		else
+			failures += 1
+			print(`  FAIL  camera {i} sees over the hall: the sky is in the frame`)
 		end
-	else
-		failures += 1
-		print(`  FAIL  camera {i} can see over the hall: the sky is in frame`)
 	end
 end
 
 if lowest < math.huge then
 	print(
 		string.format(
-			"  across all 8 seats the frame's ceiling is y = %.2f to %.2f",
+			"  the frame's ceiling runs y = %.2f (centre) to y = %.2f (ultrawide corner)",
 			lowest,
 			highest
 		)
 	)
-	check(
-		highest <= Config.Arena.SeenHeight + 1.5,
-		string.format(
-			"the seen band really is about %d studs (measured %.2f)",
-			Config.Arena.SeenHeight,
-			highest
-		)
-	)
+	-- No slack. The wall has to swallow the worst corner of the widest
+	-- screen, or somebody somewhere is looking at the night sky.
+	check(highest < Config.Arena.Wall.Height, "the wall covers even the ultrawide corner")
 end
 
 --------------------------------------------------------------------------------

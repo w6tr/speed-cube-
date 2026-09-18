@@ -88,18 +88,31 @@ the staging is what makes it worth clicking.
 
 **The camera is locked and nobody can look around.** `CameraRig`
 re-applies it every `RenderStepped`, so all eight seats see the same
-picture forever: eye at y = 9.1, pitched 30° down at the cube, 55° field
-of view. That puts the TOP edge of the frame 2.5° *below* the horizon —
-the frame's ceiling falls about a stud for every 23 studs of distance.
-Measured in the engine by `tools/smoke-arena.luau`: the top of the
-picture lands on the back wall at **y = 6.5, 63 studs out**.
+picture forever. The eye sits at pedestal height + cube height + the
+camera offset — 9.25 studs as those are set today, and it moves whenever
+any of them do — pitched 30° down at the cube, 55° field of view. That
+puts the TOP edge of the frame 2.5° *below* the horizon, so the frame's
+ceiling falls about a stud for every 23 studs of distance. Measured in
+the engine by `tools/smoke-arena.luau`: the middle of the top edge lands
+on the fourth row of seating at **y = 6.77, 56 studs out**.
 
-So a tall wall, a roof and a lighting truss are invisible during play.
-Everything a player will ever see lives between the floor and about 7
-studs (`Config.Arena.SeenHeight`), which is exactly what a competition
-floor is anyway. The detail budget goes there; the truss and the lamp
-housings exist only so a free camera has something overhead for the store
-icon.
+That is the *middle* of the top edge. The **corners** of a wide screen
+look along rays that fall away more slowly and reach y = 8.46 in the
+worst ultrawide case — which the same test now measures, because Roblox's
+field of view is vertical, so it is width and not height that varies
+between a phone and a monitor. (A narrow phone screen sees the same
+height and less width, which makes phones the safe case, always.)
+
+So `Config.Arena.SeenHeight` is the height below which detail is worth
+**building** — not a promise that nothing above it is ever seen.
+Everything the eye actually lands on lives between the floor and about 7
+studs, which is exactly what a competition floor is anyway, and that is
+where the budget goes. The back wall is deliberately 17 studs tall so it
+still covers the ultrawide corner, and the first second of a session,
+before the first Sync arrives and while the camera is still Roblox's own
+and the player can look wherever they like. The truss and the lamp
+housings are out of frame during play; they exist for that first second
+and for the store icon.
 
 ### Where it lives
 
@@ -108,12 +121,17 @@ icon.
 | `Config.Look` | the lighting rig's numbers |
 | `Config.Arena` | the hall: radii, heights, colours, the hoarding texts |
 | `src/server/Look.luau` | applies the rig at boot |
-| `src/server/Arena.luau` | builds the hall around the ring (339 parts) |
+| `src/server/Arena.luau` | builds the hall around the ring (315 parts, 73 of them Neon, 16 lights) |
 | `default.project.json` | the same lighting again, for Studio's edit view, plus `Technology` — which a script may neither read nor write |
 
 `Arena` never touches a pedestal CFrame; it only positions things *from*
 them, so the camera, the cube and every spectator copy stay exactly where
-the rest of the game puts them.
+the rest of the game puts them. Both it and the lighting rig run inside a
+`pcall`: they are decoration, and a bad property in either must not be
+able to take a live server down with it.
+
+The numbers above are printed by `tools/smoke-arena.luau`. Re-run it
+rather than hand-copying them when the config changes.
 
 ### Still to do
 
