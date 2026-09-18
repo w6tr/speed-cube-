@@ -399,6 +399,31 @@ Config.Arena = {
 		SeatColor = Color3.fromRGB(64, 74, 94),
 		Seats = 28, -- little blocks along the front row, to give the bank a scale
 		SeatRise = 0.45,
+
+		-- A CROWD. Without one the hall reads as eight empty stools around one
+		-- cube, which says "nobody is here" -- and a competition final with no
+		-- crowd in it is just a dark room. They are one block each: at fifty
+		-- studs, through haze, a block with a head-coloured top is a person,
+		-- and anything more detailed is parts spent where nobody can see them.
+		--
+		-- Deliberately NOT full: gaps read as a real crowd, a solid wall of
+		-- bodies reads as wallpaper. Seeded so every server builds the same
+		-- one and it never shuffles between restarts.
+		Crowd = {
+			Rows = 3, -- from the front; the back rows are above the frame anyway
+			PerRow = 30,
+			Fill = 0.72, -- the share of places that have somebody in them
+			Width = 0.62,
+			Height = 1.5,
+			Seed = 20260917,
+			Colors = {
+				Color3.fromRGB(58, 66, 88),
+				Color3.fromRGB(72, 62, 86),
+				Color3.fromRGB(52, 74, 92),
+				Color3.fromRGB(84, 70, 74),
+				Color3.fromRGB(64, 80, 82),
+			},
+		},
 	},
 
 	Wall = {

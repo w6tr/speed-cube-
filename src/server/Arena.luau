@@ -362,6 +362,41 @@ local function buildStands(parent: Instance)
 			S.SeatColor
 		)
 	end
+
+	-- And a crowd in them. Seeded, so every server builds the same one and
+	-- it never shuffles between restarts.
+	local C = S.Crowd
+	local rng = Random.new(C.Seed)
+	local crowd = Instance.new("Folder")
+	crowd.Name = "Crowd"
+	crowd.Parent = folder
+
+	for row = 1, math.min(C.Rows, S.Rows) do
+		local radius = S.InnerRadius + (row - 1) * S.RowDepth
+		local standing = S.Base + (row - 1) * S.RowRise
+		for i = 1, C.PerRow do
+			if rng:NextNumber() > C.Fill then
+				continue -- an empty place; a solid wall of bodies reads as wallpaper
+			end
+			-- Nudge each one off its exact slot so the rows do not read as
+			-- a picket fence.
+			local jitter = (rng:NextNumber() - 0.5) * 0.45
+			local angle = (i - 1 + jitter) / C.PerRow * math.pi * 2
+			local height = C.Height * (0.86 + rng:NextNumber() * 0.28)
+			local position = Vector3.new(
+				math.cos(angle) * radius,
+				standing + height / 2,
+				math.sin(angle) * radius
+			)
+			part(
+				crowd,
+				`Fan{row}_{i}`,
+				Vector3.new(C.Width, height, C.Width * 0.7),
+				CFrame.lookAt(position, Vector3.new(0, position.Y, 0)),
+				C.Colors[rng:NextInteger(1, #C.Colors)]
+			)
+		end
+	end
 end
 
 --------------------------------------------------------------------------------
