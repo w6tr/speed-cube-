@@ -144,7 +144,9 @@ local function othersFor(player: Player): { Remotes.Other }
 			local deal = state.deal
 			table.insert(out, {
 				index = state.pedestalIndex,
+				pedestal = state.pedestal,
 				cubeId = if data then data.equipped else Cubes.Default,
+				dealId = if deal then deal.id else 0,
 				scramble = if deal then deal.scramble else {},
 				solution = if deal then deal.solution else {},
 				step = if deal then deal.step else 0,
@@ -212,7 +214,7 @@ local function deal(state: State)
 	}
 	state.popping = false
 	SolveService.sync(state.player)
-	spectate(N.SpectateDeal, state.pedestalIndex, scramble)
+	spectate(N.SpectateDeal, state.pedestalIndex, state.dealCounter, scramble)
 end
 
 local function finish(state: State, current: Deal)
@@ -432,7 +434,7 @@ function SolveService.join(player: Player): boolean
 	}
 	states[player] = state
 	updateLeaderstats(state, data)
-	spectate(N.SpectateLook, index, data.equipped)
+	spectate(N.SpectateLook, index, data.equipped, state.pedestal)
 	deal(state)
 	return true
 end

@@ -39,6 +39,7 @@ SolveService.init(world.pedestals)
 CubeService.init({
 	sync = SolveService.sync,
 	pedestalIndexOf = SolveService.pedestalIndexFor,
+	pedestalOf = SolveService.pedestalFor,
 })
 SaveService.start()
 SolveService.start()

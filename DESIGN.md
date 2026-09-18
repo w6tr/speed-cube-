@@ -58,8 +58,10 @@ streak are the whole game.
 - **Client** (`CubeView`, `Input`, `Hud`): draws the cube, checks each
   swipe against the same deal for an instant turn or wobble, sends the
   direction, redraws from the server whenever a Sync disagrees.
-- **Other players** see a still solved cube on each pedestal (the server
-  builds one) and the avatar behind it. Live turns for spectators are M2.
+- **Other players** see your cube turning for real: the server broadcasts
+  every accepted move, deal and pop with your pedestal index, and each
+  client keeps a silent copy of your cube in your equipped look. Nothing
+  a client sends can fake a turn on someone else's screen.
 
 ## Milestones
 

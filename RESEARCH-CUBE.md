@@ -89,8 +89,11 @@ code in M1 needs to change for boxes, only additions.
   SurfaceGuis with a UICorner. 26 parts per cube, no sticker parts to
   move. `LightInfluence` keeps them readable in the fixed light.
 - **Client-side cube.** The live cube is built by the client in Workspace
-  and never replicates; the server builds a still one per pedestal so
-  others see something. Roblox's "Front" NormalId is −Z; the cube's
+  and never replicates. Other players' cubes are ALSO client-built
+  copies, driven by server broadcasts of accepted moves (M2); the server
+  builds no cubes at all. Sync seeds each copy with the current deal id,
+  scramble and step; a deal id already drawn is never redrawn, so a copy
+  is never reset under a running animation. Roblox's "Front" NormalId is −Z; the cube's
   front face toward the camera is +Z, so the arrow's SurfaceGui uses
   `Face = Back`.
 - **Right-hand rule.** A clockwise face turn is a negative angle about

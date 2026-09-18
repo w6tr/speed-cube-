@@ -92,15 +92,18 @@ local function sanitise(data: PlayerData)
 			data.best[key] = nil
 		end
 	end
+	-- Unknown cube ids are KEPT: a cube renamed or retired in the defs
+	-- must not erase what a player earned (rule 5: never wipe). The
+	-- collection screen simply skips ids it cannot draw.
 	for id, count in data.cubes :: { [string]: any } do
-		if not Cubes.get(id) or type(count) ~= "number" or count < 1 then
+		if type(count) ~= "number" or count < 1 then
 			data.cubes[id] = nil
 		end
 	end
 	if not data.cubes[Cubes.Default] then
 		data.cubes[Cubes.Default] = 1
 	end
-	if not data.cubes[data.equipped] then
+	if not data.cubes[data.equipped] or not Cubes.get(data.equipped) then
 		data.equipped = Cubes.Default
 	end
 end

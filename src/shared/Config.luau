@@ -44,10 +44,12 @@ Config.Depth = {
 -- Coins: what a solve pays
 --------------------------------------------------------------------------------
 --[[
-	coins = (PerMove * depth + SolveBonus + speedBonus + perfects) * comboMult
+	coins = (PerMove * depth + SolveBonus + speedBonus + perfects)
+	        * comboMult * cubeMult
 	speedBonus is SpeedBonus when the solve took under ParPerMove * depth
 	seconds (measured on the server from the first correct swipe to the
-	last), else 0. comboMult comes from the Combo section.
+	last), else 0. comboMult comes from the Combo section; cubeMult is the
+	equipped cube's multiplier (Defs/Cubes.luau), capped by Boxes.MaxMult.
 ]]
 Config.Coins = {
 	PerMove = 1,
@@ -85,6 +87,7 @@ Config.Timing = {
 	BurstMoves = 3,
 	MinHumanPerMove = 0.08, -- a solve faster than this per move earns no speed bonus or best
 	SyncThrottle = 0.5, -- the server answers RequestSync at most this often per player
+	ActionCooldown = 0.25, -- one box or equip per player per this many seconds; faster is dropped
 	ResyncAfter = 2.5, -- the client asks for a Sync if a solve is not confirmed by then
 }
 
@@ -292,12 +295,17 @@ Config.Products = {
 --------------------------------------------------------------------------------
 -- Board: the leaderboard pillar in the middle of the ring
 --------------------------------------------------------------------------------
+--[[
+	Kept LOW on purpose: every camera looks across the ring centre at the
+	pedestals opposite. A camera sits about 7 studs up and a cube about
+	4.5, so a pillar under ~5 studs never hides anybody's cube.
+]]
 Config.Board = {
-	Width = 7,
-	Height = 11,
-	Lines = 6, -- depth records shown (fastest per depth, deepest first)
-	SolverLines = 3, -- most solves this server
-	TextSize = 26,
+	Width = 9,
+	Height = 4.6,
+	Lines = 4, -- depth records shown (fastest per depth, deepest first)
+	SolverLines = 2, -- most solves this server
+	TextSize = 22,
 	Color = Color3.fromRGB(30, 32, 40),
 	TrimColor = Color3.fromRGB(231, 174, 58),
 }

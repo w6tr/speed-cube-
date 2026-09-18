@@ -32,10 +32,10 @@ local NAMES: { [string]: string } = {
 
 	-- server -> ALL clients: what is happening on other pedestals. Each
 	-- client ignores its own pedestal index.
-	SpectateDeal = "SpectateDeal", -- (index, scramble: {string})
+	SpectateDeal = "SpectateDeal", -- (index, dealId: number, scramble: {string})
 	SpectateMove = "SpectateMove", -- (index, move: string)
 	SpectatePop = "SpectatePop", -- (index)
-	SpectateLook = "SpectateLook", -- (index, cubeId: string)
+	SpectateLook = "SpectateLook", -- (index, cubeId: string, pedestal: CFrame)
 	SpectateLeave = "SpectateLeave", -- (index)
 }
 
@@ -54,7 +54,9 @@ export type Deal = {
 -- Another player's pedestal, for drawing their cube on join.
 export type Other = {
 	index: number,
+	pedestal: CFrame, -- that pedestal's top centre, from the server
 	cubeId: string,
+	dealId: number, -- 0 when they have no deal
 	scramble: { string },
 	solution: { string },
 	step: number,

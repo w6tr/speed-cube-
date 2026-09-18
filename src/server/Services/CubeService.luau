@@ -7,12 +7,15 @@
 	file checks the coins, rolls the tier from the box's odds, picks the
 	cube, records the copy, equips it when it beats the one on, tells the
 	player what hatched, tells everybody else what the pedestal now looks
-	like, and re-syncs.
+	like, and re-syncs. Each player gets one box or equip per
+	ActionCooldown; anything faster is dropped, so nobody can make the
+	whole ring restyle cubes in a loop.
 
 	Robux: MarketplaceService.ProcessReceipt lands here. A product either
 	adds coins or hatches boxes for free. Purchase ids are remembered in
-	the save so Roblox's retries never grant twice, and nothing is
-	granted to a session that cannot be saved.
+	the save so Roblox's retries never grant twice, a purchase counts as
+	granted only once the save has been written, and nothing is granted
+	to a session that cannot be saved.
 ]]
 
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -21,6 +24,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local Boxes = require(Shared.Defs.Boxes)
 local Cubes = require(Shared.Defs.Cubes)
 local Remotes = require(Shared.Remotes)
 
@@ -34,41 +38,30 @@ local rng = Random.new()
 export type Hooks = {
 	sync: (player: Player) -> (),
 	pedestalIndexOf: (player: Player) -> number?,
+	pedestalOf: (player: Player) -> CFrame?,
 }
 
 local hooks: Hooks? = nil
-
-type Box = { id: string, name: string, cost: number, odds: { [string]: number } }
-local boxes: { [string]: Box } = {}
-for _, box in Config.Boxes.List :: { Box } do
-	boxes[box.id] = box
-end
+local lastActionAt: { [Player]: number } = {}
 
 local function toast(player: Player, kind: string, text: string)
 	Remotes.get(N.Toast):FireClient(player, kind, text)
 end
 
-local function rollTier(box: Box): string
-	local total = 0
-	for _, tier in Config.Boxes.TierOrder do
-		total += box.odds[tier] or 0
+local function allowed(player: Player): boolean
+	local now = os.clock()
+	if now - (lastActionAt[player] or 0) < Config.Timing.ActionCooldown then
+		return false
 	end
-	local pick = rng:NextNumber(0, total)
-	local acc = 0
-	for _, tier in Config.Boxes.TierOrder do
-		acc += box.odds[tier] or 0
-		if pick <= acc and (box.odds[tier] or 0) > 0 then
-			return tier
-		end
-	end
-	return Config.Boxes.TierOrder[1]
+	lastActionAt[player] = now
+	return true
 end
 
-local function rollCube(box: Box): Cubes.Def
-	local tier = rollTier(box)
-	local pool = Cubes.ofTier(tier)
+local function rollCube(box: Boxes.Box): Cubes.Def
+	local tier = Boxes.rollTier(box, rng:NextNumber())
+	local pool = Boxes.pool(tier)
 	if #pool == 0 then
-		pool = Cubes.ofTier(Config.Boxes.TierOrder[1])
+		pool = Boxes.pool(Config.Boxes.TierOrder[1])
 	end
 	return pool[rng:NextInteger(1, #pool)]
 end
@@ -79,8 +72,9 @@ local function broadcastLook(player: Player, cubeId: string)
 		return
 	end
 	local index = h.pedestalIndexOf(player)
-	if index then
-		Remotes.get(N.SpectateLook):FireAllClients(index, cubeId)
+	local pedestal = h.pedestalOf(player)
+	if index and pedestal then
+		Remotes.get(N.SpectateLook):FireAllClients(index, cubeId, pedestal)
 	end
 end
 
@@ -89,7 +83,7 @@ end
 	the result, or nil when nothing happened.
 ]]
 function CubeService.roll(player: Player, boxId: string, free: boolean?): Remotes.HatchResult?
-	local box = boxes[boxId]
+	local box = Boxes.get(boxId)
 	local data = SaveService.get(player)
 	local h = hooks
 	if not box or not data or not h then
@@ -143,7 +137,14 @@ end
 -- Robux
 --------------------------------------------------------------------------------
 
-type Product = { key: string, id: number, kind: string, amount: number, box: string?, label: string }
+type Product = {
+	key: string,
+	id: number,
+	kind: string,
+	amount: number,
+	box: string?,
+	label: string,
+}
 local productsById: { [number]: Product } = {}
 for _, product in Config.Products :: { Product } do
 	if product.id > 0 then
@@ -158,12 +159,20 @@ local function processReceipt(receipt: { [string]: any }): Enum.ProductPurchaseD
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
 	local data = SaveService.get(player)
-	if not data or not SaveService.canSave(player) then
+	if not data then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+	if not SaveService.canSave(player) then
+		toast(player, "info", "Your purchase will arrive next time you join")
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
 	local purchaseId = tostring(receipt.PurchaseId)
 	if table.find(data.receipts, purchaseId) then
-		return Enum.ProductPurchaseDecision.PurchaseGranted
+		-- Already granted in memory (a retry). It counts only once it is
+		-- on disk; until then Roblox keeps asking, which is what we want.
+		return if SaveService.save(player)
+			then Enum.ProductPurchaseDecision.PurchaseGranted
+			else Enum.ProductPurchaseDecision.NotProcessedYet
 	end
 
 	-- Record first, so a retry during the grant cannot grant twice.
@@ -185,12 +194,9 @@ local function processReceipt(receipt: { [string]: any }): Enum.ProductPurchaseD
 		end
 	end
 
-	if SaveService.save(player) then
-		return Enum.ProductPurchaseDecision.PurchaseGranted
-	end
-	-- Not saved: Roblox will retry, and the receipt id already recorded
-	-- in memory turns that retry into a no-op grant.
-	return Enum.ProductPurchaseDecision.NotProcessedYet
+	return if SaveService.save(player)
+		then Enum.ProductPurchaseDecision.PurchaseGranted
+		else Enum.ProductPurchaseDecision.NotProcessedYet
 end
 
 --------------------------------------------------------------------------------
@@ -203,14 +209,17 @@ end
 
 function CubeService.start()
 	Remotes.get(N.RollBox).OnServerEvent:Connect(function(player: Player, boxId: any)
-		if type(boxId) == "string" then
+		if type(boxId) == "string" and allowed(player) then
 			CubeService.roll(player, boxId)
 		end
 	end)
 	Remotes.get(N.Equip).OnServerEvent:Connect(function(player: Player, cubeId: any)
-		if type(cubeId) == "string" then
+		if type(cubeId) == "string" and allowed(player) then
 			CubeService.equip(player, cubeId)
 		end
+	end)
+	Players.PlayerRemoving:Connect(function(player)
+		lastActionAt[player] = nil
 	end)
 	MarketplaceService.ProcessReceipt = processReceipt
 end

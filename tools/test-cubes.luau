@@ -92,32 +92,72 @@ for _, box in Config.Boxes.List do
 end
 
 print("3. roll distribution (20,000 per box)")
--- The same roll as CubeService.rollTier, with a deterministic random.
+-- The REAL roll (Defs/Boxes.luau), fed a deterministic random. Boxes
+-- requires Config and Cubes through Roblox's tree; hand it stubs that
+-- resolve to the modules already loaded above.
+local shared = {
+	WaitForChild = function(_, name)
+		return name
+	end,
+}
+local Boxes = load("src/shared/Defs/Boxes.luau", {
+	game = {
+		GetService = function()
+			return {
+				WaitForChild = function()
+					return shared
+				end,
+			}
+		end,
+	},
+	script = { Parent = {
+		WaitForChild = function(_, name)
+			return name
+		end,
+	} },
+	require = function(key)
+		return if key == "Config" then Config else Cubes
+	end,
+})
 local state = 987654321
-local function nextNumber(lo, hi)
+local function nextNumber()
 	state = (state * 1103515245 + 12345) % 2147483648
-	return lo + (state / 2147483648) * (hi - lo)
+	return state / 2147483648
 end
-local function rollTier(box)
-	local total = 0
+print("  edges:")
+for _, box in Config.Boxes.List do
+	local first, last
 	for _, tier in Config.Boxes.TierOrder do
-		total += box.odds[tier] or 0
-	end
-	local pick = nextNumber(0, total)
-	local acc = 0
-	for _, tier in Config.Boxes.TierOrder do
-		acc += box.odds[tier] or 0
-		if pick <= acc and (box.odds[tier] or 0) > 0 then
-			return tier
+		if (box.odds[tier] or 0) > 0 then
+			first = first or tier
+			last = tier
 		end
 	end
-	return Config.Boxes.TierOrder[1]
+	check(Boxes.rollTier(box, 0) == first, `{box.id}: r=0 -> {first}`)
+	check(Boxes.rollTier(box, 0.999999) == last, `{box.id}: r~1 -> {last}`)
+	check(Boxes.rollTier(box, 1) == last, `{box.id}: r=1 (never happens) -> {last}`)
 end
+check(
+	Boxes.rollTier({ odds = { Common = 0, Rare = 0, Epic = 0, Legendary = 0 } }, 0.5) == "Common",
+	"all-zero odds -> Common"
+)
+check(
+	Boxes.rollTier({ odds = { Common = 50, Rare = 0, Epic = 50, Legendary = 0 } }, 0.5) == "Epic",
+	"zero tier in the middle is skipped"
+)
+local commonPool = Boxes.pool("Common")
+local hasClassic = false
+for _, def in commonPool do
+	if def.id == Cubes.Default then
+		hasClassic = true
+	end
+end
+check(not hasClassic and #commonPool > 0, "Common pool leaves out the starter")
 for _, box in Config.Boxes.List do
 	local counts = {}
 	local n = 20000
 	for _ = 1, n do
-		local tier = rollTier(box)
+		local tier = Boxes.rollTier(box, nextNumber())
 		counts[tier] = (counts[tier] or 0) + 1
 	end
 	for _, tier in Config.Boxes.TierOrder do

@@ -115,7 +115,8 @@ local lockUntil = 0 -- after a wrong swipe
 local dealToken = 0
 local awaitingSolve = false
 local hatching = false
-local equippedId = Cubes.Default
+local equippedId = Cubes.Default -- the look the live cube wears right now
+local serverEquipped = Cubes.Default -- the server's word, from every Sync
 
 -- Swipes sent and not yet answered: the step this screen was on AFTER
 -- each one. The server's answer must land on the same step.
@@ -303,6 +304,7 @@ Remotes.get(N.Sync).OnClientEvent:Connect(function(state: Remotes.SyncState)
 	hud.set(state)
 	collection.set(state)
 	Spectators.set(state.pedestalIndex, state.others)
+	serverEquipped = state.equipped
 	if state.equipped ~= equippedId and not hatching then
 		applyEquipped(state.equipped)
 	end
@@ -374,15 +376,32 @@ Remotes.get(N.Solved).OnClientEvent:Connect(function(result: Remotes.SolveResult
 	CameraRig.punch()
 end)
 
-Remotes.get(N.Hatched).OnClientEvent:Connect(function(result: Remotes.HatchResult)
-	local view = cube
-	local def = Cubes.get(result.cubeId)
-	if not view or not def then
+--[[
+	Hatches play one at a time (a bundle sends several at once). The
+	reveal shows the cube that came OUT of the box; when the box is put
+	away the cube goes back to whatever the server says is equipped,
+	which is the new one if it was an upgrade.
+]]
+local hatchQueue: { Remotes.HatchResult } = {}
+
+local function runHatches()
+	if hatching then
 		return
 	end
-	hud.setCoins(result.coins)
-	collection.frame.Visible = false
+	local result = table.remove(hatchQueue, 1)
+	local view = cube
+	if not result or not view then
+		collection.setBusy(false)
+		return
+	end
+	local def = Cubes.get(result.cubeId)
+	if not def then
+		runHatches()
+		return
+	end
 	hatching = true
+	collection.setBusy(true)
+	collection.frame.Visible = false
 	view.prompt(nil)
 	hud.setHint(nil, isTouch)
 	hud.setQueue({})
@@ -390,20 +409,23 @@ Remotes.get(N.Hatched).OnClientEvent:Connect(function(result: Remotes.HatchResul
 	local tier = (Config.Boxes.Tiers :: any)[def.tier]
 	local color = if tier then tier.Color else Theme.Colors.Coin
 	Hatch.play(cubeRoot, color, function()
-		if result.equipped == result.cubeId then
-			applyEquipped(result.cubeId)
-		end
+		view.setLook(def.look, def.sound)
 		view.setVisible(true)
 		view.pop()
 		local tag = if result.isNew then "NEW  " else `x{result.count}  `
 		toasts.show("big", `{tag}{def.name}  ({def.tier})  coins x{def.mult}`)
 	end, function()
 		hatching = false
-		if result.equipped ~= equippedId then
-			applyEquipped(result.equipped)
-		end
+		applyEquipped(serverEquipped)
 		showPrompt()
+		runHatches()
 	end)
+end
+
+Remotes.get(N.Hatched).OnClientEvent:Connect(function(result: Remotes.HatchResult)
+	hud.setCoins(result.coins)
+	table.insert(hatchQueue, result)
+	runHatches()
 end)
 
 Remotes.get(N.Toast).OnClientEvent:Connect(function(kind: string, text: string)

@@ -222,11 +222,13 @@ function CubeView.build(root: CFrame, options: Options?): Api
 		place()
 	end
 
-	type Job = { move: string, seconds: number }
+	-- Every motion of the cubies goes through ONE queue and ONE worker, so
+	-- two animations can never fight over the same cubies. A shuffle is
+	-- just a run of quick jobs, the last of which carries the callback.
+	type Job = { move: string, seconds: number, done: (() -> ())? }
 	local queue: { Job } = {}
 	local animating = false
 	local popping = false
-	local shuffling = false
 	local destroyed = false
 
 	local function runJob(job: Job)
@@ -267,7 +269,11 @@ function CubeView.build(root: CFrame, options: Options?): Api
 		task.spawn(function()
 			while #queue > 0 and not destroyed do
 				local job = table.remove(queue, 1) :: Job
+				sound("Turn")
 				runJob(job)
+				if job.done then
+					job.done()
+				end
 			end
 			animating = false
 		end)
@@ -275,7 +281,6 @@ function CubeView.build(root: CFrame, options: Options?): Api
 
 	local function turn(move: string, seconds: number?)
 		table.insert(queue, { move = move, seconds = seconds or Config.Cube.TurnSeconds })
-		sound("Turn")
 		pump()
 	end
 
@@ -294,23 +299,26 @@ function CubeView.build(root: CFrame, options: Options?): Api
 		then so no swipe can slip in mid-shuffle.
 	]]
 	local function shuffle(moves: { string }, done: () -> ())
-		shuffling = true
-		task.spawn(function()
-			for _, move in moves do
-				if destroyed then
-					return
-				end
-				runJob({ move = move, seconds = Config.Cube.ShuffleTurnSeconds })
-				sound("Turn")
-			end
-			shuffling = false
+		if #moves == 0 then
 			done()
-		end)
+			return
+		end
+		for i, move in moves do
+			table.insert(queue, {
+				move = move,
+				seconds = Config.Cube.ShuffleTurnSeconds,
+				done = if i == #moves then done else nil,
+			})
+		end
+		pump()
 	end
 
 	local shaking = false
 	local function isBusy(): boolean
-		return animating or shuffling or popping or shaking or #queue > 0
+		if destroyed then
+			return false
+		end
+		return animating or popping or shaking or #queue > 0
 	end
 
 	----------------------------------------------------------------------------
@@ -545,6 +553,7 @@ function CubeView.build(root: CFrame, options: Options?): Api
 
 	local function destroy()
 		destroyed = true
+		queue = {}
 		setPulse(false)
 		for _, s in sounds do
 			s:Destroy()
