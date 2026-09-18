@@ -1,17 +1,17 @@
 --!strict
 --[[
 	Hud.luau -- coins, the timer, the arrow lane, the combo, the solve
-	card, the first-play nudge, the depth dial.
+	card, the first-play nudge, the depth dial, the CUBES button.
 
 	Laid out for 1280x720 and scaled by Theme.screen. Nothing here decides
 	anything; it shows what init.client tells it.
 
-	Top row:      coins (left)   timer + step (centre)   combo (right)
+	Top row:      coins + equipped cube (left)   timer + step (centre)   combo (right)
 	Under timer:  the ARROW LANE -- the current arrow big, the next two
 	              small, so a fast player can chain instead of reading one
 	              at a time (the note lane of a rhythm game)
 	Centre:       the solve card (between cubes) / the first-play nudge
-	Bottom:       the hint (centre) and the depth dial (right)
+	Bottom:       CUBES (left), the hint (centre), the depth dial (right)
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,6 +20,7 @@ local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local Cubes = require(Shared.Defs.Cubes)
 local Remotes = require(Shared.Remotes)
 
 local Theme = require(script.Parent.Theme)
@@ -28,6 +29,7 @@ local Hud = {}
 
 export type Callbacks = {
 	depth: (delta: number) -> (),
+	collection: () -> (),
 }
 
 export type Api = {
@@ -43,6 +45,7 @@ export type Api = {
 	stopClock: (seconds: number) -> (),
 	resetClock: () -> (),
 	addCoins: (n: number) -> (),
+	setCoins: (n: number) -> (),
 }
 
 local ARROWS: { [string]: string } = { Up = "▲", Down = "▼", Left = "◀", Right = "▶" }
@@ -69,6 +72,11 @@ local function comboColor(combo: number): Color3
 	return color
 end
 
+local function tierColor(tier: string): Color3
+	local t = (Config.Boxes.Tiers :: any)[tier]
+	return if t then t.Color else Theme.Colors.InkSoft
+end
+
 function Hud.build(parent: Instance, callbacks: Callbacks): Api
 	local C = Theme.Colors
 	local H = Config.Hud
@@ -77,11 +85,15 @@ function Hud.build(parent: Instance, callbacks: Callbacks): Api
 	-- Top row
 	----------------------------------------------------------------------------
 
-	local coinBox = Theme.frame(parent, "Coins", UDim2.new(0, 200, 0, 48), UDim2.new(0, 16, 0, 12))
+	local coinBox = Theme.frame(parent, "Coins", UDim2.new(0, 220, 0, 66), UDim2.new(0, 16, 0, 12))
 	Theme.padding(coinBox, 10)
 	local coinLabel =
-		Theme.label(coinBox, "Value", "0", UDim2.new(1, 0, 1, 0), UDim2.new(0, 0, 0, 0), 24, {
+		Theme.label(coinBox, "Value", "0", UDim2.new(1, 0, 0, 28), UDim2.new(0, 0, 0, 0), 24, {
 			color = C.Coin,
+		})
+	local cubeLabel =
+		Theme.label(coinBox, "Cube", "", UDim2.new(1, 0, 0, 18), UDim2.new(0, 0, 0, 28), 13, {
+			color = C.InkSoft,
 		})
 	local shownCoins = 0
 
@@ -158,7 +170,7 @@ function Hud.build(parent: Instance, callbacks: Callbacks): Api
 	)
 
 	----------------------------------------------------------------------------
-	-- Hint, nudge, dial
+	-- Hint, nudge, dial, CUBES
 	----------------------------------------------------------------------------
 
 	local hintLabel = Theme.label(
@@ -213,6 +225,17 @@ function Hud.build(parent: Instance, callbacks: Callbacks): Api
 			callbacks.depth(1)
 		end
 	)
+
+	local cubesButton = Theme.button(
+		parent,
+		"Cubes",
+		"CUBES",
+		UDim2.new(0, 150, 0, 48),
+		UDim2.new(0, 16, 1, -68),
+		C.Coin,
+		callbacks.collection
+	)
+	cubesButton.TextColor3 = C.Surface
 
 	----------------------------------------------------------------------------
 	-- The solve card
@@ -355,7 +378,7 @@ function Hud.build(parent: Instance, callbacks: Callbacks): Api
 			table.insert(bits, `{result.perfects} PERFECT`)
 		end
 		if result.mult > 1 then
-			table.insert(bits, string.format("x%.1f combo", result.mult))
+			table.insert(bits, string.format("x%.2f", result.mult))
 		end
 		cardLine.Text = table.concat(bits, "   ")
 		card.Visible = true
@@ -371,6 +394,11 @@ function Hud.build(parent: Instance, callbacks: Callbacks): Api
 	local function set(state: Remotes.SyncState)
 		setCoins(state.coins)
 		setCombo(state.combo)
+		local def = Cubes.get(state.equipped)
+		if def then
+			cubeLabel.Text = `{def.name}   x{def.mult}`
+			cubeLabel.TextColor3 = tierColor(def.tier)
+		end
 		depthLabel.Text = `DEPTH {state.depth}  (max {state.unlockedDepth})`
 		Theme.setEnabled(minus, state.depth > Config.Depth.Min, C.ButtonMuted)
 		Theme.setEnabled(plus, state.depth < state.unlockedDepth, C.Button)
@@ -395,6 +423,7 @@ function Hud.build(parent: Instance, callbacks: Callbacks): Api
 		stopClock = stopClock,
 		resetClock = resetClock,
 		addCoins = addCoins,
+		setCoins = setCoins,
 	}
 end
 

@@ -6,9 +6,8 @@
 	else in the codebase should call Instance.new("RemoteEvent").
 
 	The client never sends a number the server trusts. It sends the
-	DIRECTION it swiped; the server knows which move is expected next and
-	decides whether that direction was right, how fast it came, and what it
-	is worth.
+	DIRECTION it swiped, the ID of a box or a cube; the server knows what
+	those mean, what they cost and whether they are allowed.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -21,12 +20,23 @@ local NAMES: { [string]: string } = {
 	RequestSync = "RequestSync", -- ()                       "send me my state"
 	Move = "Move", -- (direction, dealId: number, seq: number)  the player swiped
 	SetDepth = "SetDepth", -- (delta: number)                +1 / -1 on the depth dial
+	RollBox = "RollBox", -- (boxId: string)                  buy and hatch one box with coins
+	Equip = "Equip", -- (cubeId: string)                     put an owned cube on
 
 	-- server -> client (facts; the client displays)
 	Sync = "Sync", -- (state: SyncState)                      the whole player state
 	MoveResult = "MoveResult", -- (result: MoveResult)        the answer to one swipe
 	Solved = "Solved", -- (result: SolveResult)               the deal is done; pop
+	Hatched = "Hatched", -- (result: HatchResult)             a box opened
 	Toast = "Toast", -- (kind: string, text: string)
+
+	-- server -> ALL clients: what is happening on other pedestals. Each
+	-- client ignores its own pedestal index.
+	SpectateDeal = "SpectateDeal", -- (index, scramble: {string})
+	SpectateMove = "SpectateMove", -- (index, move: string)
+	SpectatePop = "SpectatePop", -- (index)
+	SpectateLook = "SpectateLook", -- (index, cubeId: string)
+	SpectateLeave = "SpectateLeave", -- (index)
 }
 
 --------------------------------------------------------------------------------
@@ -41,6 +51,15 @@ export type Deal = {
 	step: number, -- how many of the solution's moves are done
 }
 
+-- Another player's pedestal, for drawing their cube on join.
+export type Other = {
+	index: number,
+	cubeId: string,
+	scramble: { string },
+	solution: { string },
+	step: number,
+}
+
 export type SyncState = {
 	coins: number,
 	solves: number,
@@ -51,6 +70,9 @@ export type SyncState = {
 	pedestal: CFrame, -- the top centre of the player's pedestal; +Z is toward the camera
 	pedestalIndex: number, -- which Pedestal<N> model in workspace.Lobby is theirs
 	deal: Deal?,
+	cubes: { [string]: number }, -- owned cube id -> copies
+	equipped: string, -- cube id
+	others: { Other },
 }
 
 export type MoveResult = {
@@ -68,9 +90,19 @@ export type SolveResult = {
 	seconds: number,
 	isBest: boolean,
 	combo: number,
-	mult: number,
+	mult: number, -- combo multiplier x cube multiplier
+	cubeMult: number,
 	perfects: number,
 	fast: boolean,
+}
+
+export type HatchResult = {
+	boxId: string,
+	cubeId: string,
+	isNew: boolean,
+	count: number, -- copies owned after this one
+	equipped: string, -- the cube on after the hatch (may be the new one)
+	coins: number, -- coins after paying
 }
 
 local Remotes = {}

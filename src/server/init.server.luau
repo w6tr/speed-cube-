@@ -11,6 +11,7 @@
 	  DESIGN.md             why the game is shaped like this
 	  Moves.luau            what a move is, and the direction each one prompts
 	  SolveService.luau     the deal / swipe / solve loop
+	  CubeService.luau      boxes, hatching, equipping, Robux
 	  CubeView.luau         how the client draws and turns the cube
 ]]
 
@@ -22,7 +23,9 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Remotes = require(Shared.Remotes)
 
+local Leaderboard = require(script.Leaderboard)
 local LobbyBuilder = require(script.LobbyBuilder)
+local CubeService = require(script.Services.CubeService)
 local SaveService = require(script.Services.SaveService)
 local SolveService = require(script.Services.SolveService)
 
@@ -31,9 +34,15 @@ local SolveService = require(script.Services.SolveService)
 --------------------------------------------------------------------------------
 
 local world = LobbyBuilder.build()
+Leaderboard.build(world.folder)
 SolveService.init(world.pedestals)
+CubeService.init({
+	sync = SolveService.sync,
+	pedestalIndexOf = SolveService.pedestalIndexFor,
+})
 SaveService.start()
 SolveService.start()
+CubeService.start()
 
 --------------------------------------------------------------------------------
 -- The handshake

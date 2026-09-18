@@ -220,12 +220,96 @@ Config.Sounds = {
 }
 
 --------------------------------------------------------------------------------
+-- Boxes: the cube gacha
+--------------------------------------------------------------------------------
+--[[
+	A box costs coins and hatches one cube. The tier is rolled from the
+	box's odds (they add up to 100); the cube is then picked evenly from
+	that tier (Defs/Cubes.luau). A cube you already own still counts: the
+	copy total is what golden variants and trading will build on (M4).
+	A hatched cube is equipped automatically when its multiplier beats
+	the one you have on.
+]]
+Config.Boxes = {
+	-- Tier colours (cards, the hatch burst) and the multiplier range each
+	-- tier's cubes are expected to sit in.
+	Tiers = {
+		Common = { Color = Color3.fromRGB(170, 178, 190), Range = { 1.0, 1.05 } },
+		Rare = { Color = Color3.fromRGB(86, 156, 236), Range = { 1.1, 1.15 } },
+		Epic = { Color = Color3.fromRGB(190, 90, 255), Range = { 1.25, 1.25 } },
+		Legendary = { Color = Color3.fromRGB(255, 200, 60), Range = { 1.5, 1.5 } },
+	},
+	TierOrder = { "Common", "Rare", "Epic", "Legendary" },
+	List = {
+		{
+			id = "Basic",
+			name = "Basic Box",
+			cost = 150,
+			odds = { Common = 70, Rare = 25, Epic = 5, Legendary = 0 },
+		},
+		{
+			id = "Pro",
+			name = "Pro Box",
+			cost = 600,
+			odds = { Common = 30, Rare = 45, Epic = 20, Legendary = 5 },
+		},
+	},
+	MaxMult = 1.5, -- no cube may multiply coins by more than this (the CEO's cap)
+}
+
+--------------------------------------------------------------------------------
+-- Hatch: the box-opening animation (client only)
+--------------------------------------------------------------------------------
+Config.Hatch = {
+	DropSeconds = 0.35, -- the box falls onto the pedestal
+	DropHeight = 6,
+	ShakeSeconds = 0.9, -- then rattles, harder and harder
+	ShakeStuds = 0.25,
+	RevealSeconds = 0.4, -- the cube pops out and swells
+	HoldSeconds = 0.9, -- the name card stays before play resumes
+	Particles = 70,
+	BoxColor = Color3.fromRGB(70, 50, 30),
+	LidColor = Color3.fromRGB(231, 174, 58),
+}
+
+--------------------------------------------------------------------------------
+-- Products: Robux purchases (developer products)
+--------------------------------------------------------------------------------
+--[[
+	Create each product on the Creator Dashboard (Monetization -> Developer
+	Products), paste its id here, and the matching button appears in the
+	CUBES screen. An id of 0 means "not for sale yet"; nothing shows.
+	A "coins" product adds coins; a "box" product hatches that many of
+	the named box for free. Receipts are remembered so a retried purchase
+	is never granted twice.
+]]
+Config.Products = {
+	{ key = "Coins500", id = 0, kind = "coins", amount = 500, label = "500 coins" },
+	{ key = "Coins2500", id = 0, kind = "coins", amount = 2500, label = "2,500 coins" },
+	{ key = "ProBox3", id = 0, kind = "box", box = "Pro", amount = 3, label = "3 Pro Boxes" },
+}
+
+--------------------------------------------------------------------------------
+-- Board: the leaderboard pillar in the middle of the ring
+--------------------------------------------------------------------------------
+Config.Board = {
+	Width = 7,
+	Height = 11,
+	Lines = 6, -- depth records shown (fastest per depth, deepest first)
+	SolverLines = 3, -- most solves this server
+	TextSize = 26,
+	Color = Color3.fromRGB(30, 32, 40),
+	TrimColor = Color3.fromRGB(231, 174, 58),
+}
+
+--------------------------------------------------------------------------------
 -- Save
 --------------------------------------------------------------------------------
 Config.Save = {
 	DataStoreName = "SpeedCubeSave",
 	KeyPrefix = "player_",
-	SchemaVersion = 1,
+	SchemaVersion = 2, -- 2: cubes, equipped, receipts
+	ReceiptsKept = 50, -- purchase ids remembered per player
 	AutosaveSeconds = 90,
 	LoadRetries = 3,
 	RetryDelay = 1.5,

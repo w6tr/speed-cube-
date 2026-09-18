@@ -1,6 +1,6 @@
 --!strict
 --[[
-	CubeView.luau -- the player's live cube: drawing, turning, prompting.
+	CubeView.luau -- a live cube: drawing, turning, prompting.
 
 	The cube's truth on the client is a list of 26 "current" positions
 	relative to the cube's centre (one per cubie). A turn picks the nine
@@ -8,6 +8,10 @@
 	about that layer's axis. Turns are queued and animated one after
 	another by a single worker, so a fast player who swipes ahead of the
 	animation sees the cube catch up rather than lose moves.
+
+	Built once for the player's own cube (with the arrow prompt and
+	sounds) and once per other player in the ring (silent, no arrow),
+	driven by Spectate events.
 
 	Everything here is visual. Whether a swipe was right is decided by
 	init.client (instantly, from the deal) and by the server (for coins).
@@ -21,9 +25,18 @@ local TweenService = game:GetService("TweenService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local CubeBuilder = require(Shared.CubeBuilder)
+local Cubes = require(Shared.Defs.Cubes)
 local Moves = require(Shared.Moves)
 
 local CubeView = {}
+
+export type Options = {
+	name: string?,
+	look: Cubes.Look?,
+	turnSound: string?,
+	silent: boolean?, -- no sounds at all (spectator cubes)
+	noArrow: boolean?, -- never show the prompt
+}
 
 export type Api = {
 	setRoot: (root: CFrame) -> (),
@@ -37,6 +50,9 @@ export type Api = {
 	shake: () -> (),
 	flashWrong: () -> (),
 	sound: (name: string) -> (),
+	setLook: (look: Cubes.Look, turnSound: string?) -> (),
+	setVisible: (visible: boolean) -> (),
+	destroy: () -> (),
 }
 
 local ARROWS: { [string]: string } = {
@@ -91,9 +107,10 @@ local function glyphLayout(parent: Instance): UIListLayout
 	return layout
 end
 
-function CubeView.build(root: CFrame): Api
+function CubeView.build(root: CFrame, options: Options?): Api
+	local opts: Options = options or {}
 	local size = Config.Cube.CubieSize
-	local built = CubeBuilder.build(workspace, "LiveCube", root)
+	local built = CubeBuilder.build(workspace, opts.name or "LiveCube", root, opts.look)
 	local pitch = built.pitch
 	local live: { Live } = {}
 	for _, cubie in built.cubies do
@@ -123,22 +140,53 @@ function CubeView.build(root: CFrame): Api
 	----------------------------------------------------------------------------
 
 	local sounds: { [string]: Sound } = {}
-	for _, name in { "Turn", "Perfect", "Wrong", "Solve", "Coin" } do
-		local id = (Config.Sounds :: any)[name]
-		if type(id) == "string" and id ~= "" then
-			local s = Instance.new("Sound")
-			s.Name = `Cube{name}`
-			s.SoundId = id
-			s.Volume = if name == "Solve"
-				then Config.Sounds.SolveVolume
-				else Config.Sounds.TurnVolume
-			s.Parent = SoundService
-			sounds[name] = s
+	if not opts.silent then
+		for _, name in { "Perfect", "Wrong", "Solve", "Coin" } do
+			local id = (Config.Sounds :: any)[name]
+			if type(id) == "string" and id ~= "" then
+				local s = Instance.new("Sound")
+				s.Name = `Cube{name}`
+				s.SoundId = id
+				s.Volume = if name == "Solve"
+					then Config.Sounds.SolveVolume
+					else Config.Sounds.TurnVolume
+				s.Parent = SoundService
+				sounds[name] = s
+			end
 		end
 	end
 
+	-- The turning sound belongs to the equipped cube, so it lives apart
+	-- from the fixed ones and can be swapped.
+	local turnSound: Sound? = nil
+	local function setTurnSound(id: string?)
+		if opts.silent then
+			return
+		end
+		local turnId = if id and id ~= "" then id else Config.Sounds.Turn
+		local existing = turnSound
+		if turnId == "" then
+			if existing then
+				existing:Destroy()
+				turnSound = nil
+			end
+			return
+		end
+		if not existing then
+			local s = Instance.new("Sound")
+			s.Name = "CubeTurn"
+			s.Volume = Config.Sounds.TurnVolume
+			s.SoundId = turnId
+			s.Parent = SoundService
+			turnSound = s
+			return
+		end
+		existing.SoundId = turnId
+	end
+	setTurnSound(opts.turnSound)
+
 	local function sound(name: string)
-		local s = sounds[name]
+		local s: Sound? = if name == "Turn" then turnSound else sounds[name]
 		if not s then
 			return
 		end
@@ -179,6 +227,7 @@ function CubeView.build(root: CFrame): Api
 	local animating = false
 	local popping = false
 	local shuffling = false
+	local destroyed = false
 
 	local function runJob(job: Job)
 		local def = Moves.get(job.move)
@@ -191,7 +240,7 @@ function CubeView.build(root: CFrame): Api
 			starts[i] = c.cur
 		end
 		local t0 = os.clock()
-		while true do
+		while not destroyed do
 			local a = math.min(1, (os.clock() - t0) / job.seconds)
 			local rot = CFrame.fromAxisAngle(def.axis, def.angle * easeOut(a))
 			for i, c in layer do
@@ -216,7 +265,7 @@ function CubeView.build(root: CFrame): Api
 		end
 		animating = true
 		task.spawn(function()
-			while #queue > 0 do
+			while #queue > 0 and not destroyed do
 				local job = table.remove(queue, 1) :: Job
 				runJob(job)
 			end
@@ -248,6 +297,9 @@ function CubeView.build(root: CFrame): Api
 		shuffling = true
 		task.spawn(function()
 			for _, move in moves do
+				if destroyed then
+					return
+				end
 				runJob({ move = move, seconds = Config.Cube.ShuffleTurnSeconds })
 				sound("Turn")
 			end
@@ -348,9 +400,8 @@ function CubeView.build(root: CFrame): Api
 	end
 
 	local function prompt(move: string?)
-		local def = if move then Moves.get(move) else nil
+		local def = if move and not opts.noArrow then Moves.get(move) else nil
 		if not def then
-			arrow.Transparency = 1
 			for _, g in glyphs do
 				g.Text = ""
 			end
@@ -362,10 +413,10 @@ function CubeView.build(root: CFrame): Api
 		arrow.Size = if horizontal
 			then Vector3.new(pitch * 3, pitch, 0.05)
 			else Vector3.new(pitch, pitch * 3, 0.05)
-		local local_ = if horizontal
+		local offset = if horizontal
 			then CFrame.new(0, (def.row :: number) * pitch, pitch * 1.5 + A.Offset)
 			else CFrame.new((def.column :: number) * pitch, 0, pitch * 1.5 + A.Offset)
-		arrow.CFrame = rootCF * local_
+		arrow.CFrame = rootCF * offset
 		arrowLayout.FillDirection = if horizontal
 			then Enum.FillDirection.Horizontal
 			else Enum.FillDirection.Vertical
@@ -401,15 +452,18 @@ function CubeView.build(root: CFrame): Api
 	emitter.Rotation = NumberRange.new(0, 360)
 	emitter.RotSpeed = NumberRange.new(-200, 200)
 	emitter.LightEmission = 0.6
-	local S = Config.Cube.Stickers
-	emitter.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, S.R),
-		ColorSequenceKeypoint.new(0.25, S.D),
-		ColorSequenceKeypoint.new(0.5, S.F),
-		ColorSequenceKeypoint.new(0.75, S.B),
-		ColorSequenceKeypoint.new(1, S.L),
-	})
 	emitter.Parent = burst
+
+	local function setBurstColors(stickers: { [string]: Color3 })
+		emitter.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, stickers.R),
+			ColorSequenceKeypoint.new(0.25, stickers.D),
+			ColorSequenceKeypoint.new(0.5, stickers.F),
+			ColorSequenceKeypoint.new(0.75, stickers.B),
+			ColorSequenceKeypoint.new(1, stickers.L),
+		})
+	end
+	setBurstColors((opts.look or (Cubes.get(Cubes.Default) :: Cubes.Def).look).stickers)
 
 	local function pop()
 		popping = true
@@ -418,7 +472,7 @@ function CubeView.build(root: CFrame): Api
 		task.spawn(function()
 			local t0 = os.clock()
 			local seconds = Config.Cube.PopSeconds
-			while true do
+			while not destroyed do
 				local a = math.min(1, (os.clock() - t0) / seconds)
 				scale = 1 + (Config.Cube.PopScale - 1) * math.sin(a * math.pi)
 				place()
@@ -442,7 +496,7 @@ function CubeView.build(root: CFrame): Api
 		task.spawn(function()
 			local t0 = os.clock()
 			local seconds = Config.Cube.ShakeSeconds
-			while token == shakeToken do
+			while token == shakeToken and not destroyed do
 				local a = math.min(1, (os.clock() - t0) / seconds)
 				shakeOffset = Vector3.new(math.sin(a * 40) * Config.Cube.ShakeStuds * (1 - a), 0, 0)
 				place()
@@ -459,10 +513,46 @@ function CubeView.build(root: CFrame): Api
 		end)
 	end
 
+	----------------------------------------------------------------------------
+	-- Looks, visibility, teardown
+	----------------------------------------------------------------------------
+
+	local function setLook(look: Cubes.Look, turnId: string?)
+		CubeBuilder.applyLook(built, look)
+		setBurstColors(look.stickers)
+		setTurnSound(turnId)
+	end
+
+	local function setVisible(on: boolean)
+		for _, c in live do
+			c.part.LocalTransparencyModifier = if on then 0 else 1
+			for _, gui in c.part:GetChildren() do
+				if gui:IsA("SurfaceGui") then
+					gui.Enabled = on
+				end
+			end
+		end
+		if not on then
+			prompt(nil)
+		end
+	end
+
 	local function setRoot(root2: CFrame)
 		rootCF = root2
 		burst.CFrame = rootCF
 		place()
+	end
+
+	local function destroy()
+		destroyed = true
+		setPulse(false)
+		for _, s in sounds do
+			s:Destroy()
+		end
+		if turnSound then
+			turnSound:Destroy()
+		end
+		built.model:Destroy()
 	end
 
 	place()
@@ -479,6 +569,9 @@ function CubeView.build(root: CFrame): Api
 		shake = shake,
 		flashWrong = flashWrong,
 		sound = sound,
+		setLook = setLook,
+		setVisible = setVisible,
+		destroy = destroy,
 	}
 end
 

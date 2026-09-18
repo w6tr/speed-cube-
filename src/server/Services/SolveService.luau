@@ -15,6 +15,11 @@
 	round trip. A swipe tagged with an old deal id is dropped silently:
 	the Sync that replaced the deal already told the client.
 
+	Every accepted move, every deal and every solve is also broadcast to
+	ALL clients as a Spectate event with the pedestal index, so the other
+	players' screens show this cube turning for real. Nothing a client
+	sends can fake a turn on someone else's screen.
+
 	What can a cheater do? Read the solution: the arrows show it anyway.
 	Send swipes without looking: each is checked, a wrong one locks them
 	out briefly, so guessing four directions is slower than playing. Send
@@ -28,9 +33,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local Cubes = require(Shared.Defs.Cubes)
 local Moves = require(Shared.Moves)
 local Remotes = require(Shared.Remotes)
 
+local Leaderboard = require(script.Parent.Parent.Leaderboard)
 local SaveService = require(script.Parent.SaveService)
 
 type Deal = {
@@ -121,9 +128,31 @@ local function takeToken(state: State, now: number): boolean
 	return true
 end
 
+local function spectate(name: string, index: number, ...: any)
+	Remotes.get(name):FireAllClients(index, ...)
+end
+
 --------------------------------------------------------------------------------
 -- Sync: everything the client needs to draw
 --------------------------------------------------------------------------------
+
+local function othersFor(player: Player): { Remotes.Other }
+	local out: { Remotes.Other } = {}
+	for other, state in states do
+		if other ~= player then
+			local data = SaveService.get(other)
+			local deal = state.deal
+			table.insert(out, {
+				index = state.pedestalIndex,
+				cubeId = if data then data.equipped else Cubes.Default,
+				scramble = if deal then deal.scramble else {},
+				solution = if deal then deal.solution else {},
+				step = if deal then deal.step else 0,
+			})
+		end
+	end
+	return out
+end
 
 function SolveService.sync(player: Player)
 	local state = states[player]
@@ -151,6 +180,9 @@ function SolveService.sync(player: Player)
 				step = deal.step,
 			}
 			else nil,
+		cubes = data.cubes,
+		equipped = data.equipped,
+		others = othersFor(player),
 	}
 	Remotes.get(N.Sync):FireClient(player, payload)
 end
@@ -180,6 +212,7 @@ local function deal(state: State)
 	}
 	state.popping = false
 	SolveService.sync(state.player)
+	spectate(N.SpectateDeal, state.pedestalIndex, scramble)
 end
 
 local function finish(state: State, current: Deal)
@@ -194,7 +227,8 @@ local function finish(state: State, current: Deal)
 	-- timed as zero); it earns the base coins but no speed bonus or best.
 	local plausible = current.depth == 1 or seconds >= Config.Timing.MinHumanPerMove * current.depth
 	local fast = plausible and seconds <= Config.Coins.ParPerMove * current.depth
-	local mult = comboMult(state.combo)
+	local cubeMult = math.min(Config.Boxes.MaxMult, Cubes.multOf(data.equipped))
+	local mult = comboMult(state.combo) * cubeMult
 	local raw = Config.Coins.PerMove * current.depth
 		+ Config.Coins.SolveBonus
 		+ (if fast then Config.Coins.SpeedBonus else 0)
@@ -206,6 +240,9 @@ local function finish(state: State, current: Deal)
 	local isBest = plausible and (previousBest == nil or seconds < previousBest)
 	if isBest then
 		data.best[key] = seconds
+	end
+	if plausible then
+		Leaderboard.recordSolve(player.Name, current.depth, seconds)
 	end
 
 	local unlockedBefore = unlockedDepth(data.solves)
@@ -223,10 +260,12 @@ local function finish(state: State, current: Deal)
 		isBest = isBest,
 		combo = state.combo,
 		mult = mult,
+		cubeMult = cubeMult,
 		perfects = current.perfects,
 		fast = fast,
 	}
 	Remotes.get(N.Solved):FireClient(player, result)
+	spectate(N.SpectatePop, state.pedestalIndex)
 
 	state.popping = true
 	task.delay(Config.Timing.PopSeconds, function()
@@ -291,6 +330,7 @@ local function onMove(player: Player, direction: any, dealId: any, seq: any)
 			current.perfects += 1
 		end
 		reply(true, false, perfect)
+		spectate(N.SpectateMove, state.pedestalIndex, expected.name)
 		if current.step >= current.depth then
 			finish(state, current)
 		end
@@ -392,6 +432,7 @@ function SolveService.join(player: Player): boolean
 	}
 	states[player] = state
 	updateLeaderstats(state, data)
+	spectate(N.SpectateLook, index, data.equipped)
 	deal(state)
 	return true
 end
@@ -403,11 +444,17 @@ function SolveService.leave(player: Player)
 	end
 	taken[state.pedestalIndex] = nil
 	states[player] = nil
+	spectate(N.SpectateLeave, state.pedestalIndex)
 end
 
 function SolveService.pedestalFor(player: Player): CFrame?
 	local state = states[player]
 	return if state then state.pedestal else nil
+end
+
+function SolveService.pedestalIndexFor(player: Player): number?
+	local state = states[player]
+	return if state then state.pedestalIndex else nil
 end
 
 -- For the join sequence: is there anyone this pedestal belongs to?

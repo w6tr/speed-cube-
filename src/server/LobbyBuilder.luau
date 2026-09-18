@@ -2,21 +2,22 @@
 --[[
 	LobbyBuilder.luau -- the world, made from parts at boot.
 
-	A round floor, a ring of pedestals facing OUTWARD, and a still solved
-	cube on each pedestal. Every player gets one pedestal; their camera
-	sits outside the ring looking in, so behind their own cube they see
-	the rest of the ring and everybody else's cube across it.
+	A round floor and a ring of pedestals facing OUTWARD. Every player
+	gets one pedestal; their camera sits outside the ring looking in, so
+	behind their own cube they see the rest of the ring, the leaderboard
+	pillar in the middle, and everybody else's cube across it. The cubes
+	themselves are drawn by each client (its own live one, and a copy of
+	every other player's, driven by Spectate events).
 
 	Each pedestal's CFrame has its +Z pointing outward (toward that
 	player's camera) and sits at the top centre of the pedestal. That one
-	CFrame is what the client positions the live cube and the camera from.
+	CFrame is what the client positions cubes and the camera from.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
-local CubeBuilder = require(Shared.CubeBuilder)
 
 local LobbyBuilder = {}
 
@@ -80,7 +81,7 @@ function LobbyBuilder.build(): World
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "Spawn"
 	spawn.Size = Vector3.new(6, 1, 6)
-	spawn.CFrame = CFrame.new(0, 0.5, 0)
+	spawn.CFrame = CFrame.new(0, 0.5, L.Radius - 4)
 	spawn.Transparency = 1
 	spawn.Anchored = true
 	spawn.CanCollide = false
@@ -122,12 +123,7 @@ function LobbyBuilder.build(): World
 
 		local top = base + Vector3.new(0, L.PedestalHeight, 0)
 		-- LookVector is -Z, so looking AWAY from `outward` puts +Z on `outward`.
-		local cframe = CFrame.lookAt(top, top - outward)
-		pedestals[i] = cframe
-
-		local display =
-			CubeBuilder.build(model, "Display", cframe * CFrame.new(0, Config.Cube.Height, 0))
-		display.model:SetAttribute("Pedestal", i)
+		pedestals[i] = CFrame.lookAt(top, top - outward)
 	end
 
 	folder.Parent = workspace

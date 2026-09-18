@@ -42,6 +42,9 @@ arrow appears on it.
 | swipe the last arrow | the cube pops, coins are paid, a new cube shuffles in |
 | swipe within 0.35s of the last swipe | PERFECT (+1 coin each) |
 | tap **-** / **+** bottom-right | change the depth (moves per cube); the ceiling rises every 3 solves |
+| tap **CUBES** bottom-left | the collection: buy a Basic Box (150) or Pro Box (600), equip an owned cube |
+| a box hatches | the cube on your pedestal turns into a box, rattles, bursts in the tier colour; a better cube equips itself |
+| look across the ring | other players' cubes turn for real; the pillar in the middle lists the server's fastest times per depth |
 
 The first things to eyeball in Studio:
 
@@ -106,6 +109,14 @@ goes.
 Drives the real `Swipe.luau` with scripted finger paths: flicks, long
 drags, reversals, corners, wobbles.
 
+```bash
+~/.rokit/bin/lune run tools/test-cubes.luau
+```
+
+Checks every cube definition (tier, six colours, multiplier inside its
+tier's range and under the cap), that each box's odds add to 100, and
+that 20,000 rolls per box land on the printed odds.
+
 Neither can see the 3D placement, the UI or the remotes. For those there
 is a real-engine loop: `rojo build` a place, then
 `~/.rokit/bin/run-in-roblox --place <it> --script <a smoke script>` runs
@@ -131,25 +142,34 @@ into the repo root.
 ## Layout
 
 ```
-src/shared/     Config        every number: depth, coins, combo, timing, cube, camera, lobby, input, sounds, save
+src/shared/     Config        every number: depth, coins, combo, timing, cube, camera, hud, lobby, input, sounds, boxes, hatch, products, board, save
                 Moves         the eight turns, their axes and angles, the arrow each one prompts, scramble generation
+                Swipe         finger paths -> directions (pure; tested)
                 Remotes       the wire format, and the payload types
-                CubeBuilder   the 26 cubies with SurfaceGui stickers (server builds still ones, client the live one)
+                CubeBuilder   the 26 cubies with SurfaceGui stickers; applyLook restyles a cube in place
+                Defs/Cubes    the twelve cubes: look, sound, multiplier, tier
 
 src/server/     init          builds the lobby, starts services, the join/leave sequence, stands the avatar
-                LobbyBuilder  floor, the ring of pedestals, a still cube on each
+                LobbyBuilder  floor, the ring of pedestals
+                Leaderboard   the pillar: fastest per depth and most solves on this server
                 Services/
-                  SolveService  deal / swipe / solve, combo, PERFECT, coins, leaderstats -- read this first
-                  SaveService   DataStore (coins, solves, best per depth, the dial)
+                  SolveService  deal / swipe / solve, combo, PERFECT, coins, spectate broadcasts -- read this first
+                  CubeService   boxes, hatching, equipping, Robux receipts
+                  SaveService   DataStore (coins, solves, bests, the dial, cubes, equipped, receipts)
 
-src/client/     init          wires remotes to the cube and HUD; checks swipes instantly; asks for the truth on doubt
-                CubeView      draws and turns the live cube, the arrow prompt, the pop, the wobble, sounds
+src/client/     init          wires remotes to the cube, HUD, collection and spectators; checks swipes instantly
+                CubeView      a live cube: turns, the arrow prompt, the pop, the wobble, looks, sounds
+                Spectators    one silent CubeView per other player, driven by Spectate events
+                Hatch         the box-opening animation
+                CollectionPanel  the CUBES screen: boxes to buy, cubes to equip, Robux buttons when ids are set
                 Input         touches, drags and keys -> Up / Down / Left / Right
-                Hud           coins, timer, step, combo, hint, depth dial
-                CameraRig     fixed three-quarter view of the pedestal
+                Hud           coins + cube, timer, arrow lane, combo, solve card, nudge, depth dial, CUBES
+                CameraRig     fixed three-quarter view of the pedestal, the pop punch
                 Theme, Toasts
 
 tools/          test-moves    the headless proof of the move maths
+                test-swipe    scripted finger paths through the swipe rules
+                test-cubes    cube definitions, box odds and roll distribution
 ```
 
 Read `Config.luau`, then `Moves.luau`, then `SolveService.luau`, then
@@ -165,3 +185,8 @@ Read `Config.luau`, then `Moves.luau`, then `SolveService.luau`, then
    few, stop, play again -- the coins should still be there.
 3. Never call it Rubik's anywhere: the name, the description, the icon.
    "Puzzle cube" and "speed cube" are fine.
+4. To sell coin packs or box bundles for Robux: Creator Dashboard ->
+   Monetization -> Developer Products, make one per entry in
+   `Config.Products`, paste each id over the `0`. The buttons appear on
+   their own. Leave the ids at 0 until the coin economy has been watched
+   on real players.

@@ -2,9 +2,10 @@
 --[[
 	SaveService.luau -- one save table per player.
 
-	Coins, solves, best times per depth, and the depth dial. The rules are
-	the ones that keep progress safe (the same ones Drop & Roll and
-	Squadrun use):
+	Coins, solves, best times per depth, the depth dial, the cube
+	collection, the equipped cube and the last purchase receipts. The
+	rules are the ones that keep progress safe (the same ones Drop & Roll
+	and Squadrun use):
 
 	1. ONE key per player, ONE table holding everything.
 	2. Load inside pcall with retries. If every retry fails, hand out
@@ -27,6 +28,7 @@ local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local Cubes = require(Shared.Defs.Cubes)
 
 export type PlayerData = {
 	version: number,
@@ -34,6 +36,9 @@ export type PlayerData = {
 	solves: number,
 	best: { [string]: number }, -- best seconds, keyed by depth as a string
 	depth: number, -- the dial
+	cubes: { [string]: number }, -- cube id -> copies owned
+	equipped: string, -- cube id
+	receipts: { string }, -- Robux purchase ids already granted
 	lastSeen: number,
 }
 
@@ -58,6 +63,9 @@ function SaveService.defaultData(): PlayerData
 		solves = 0,
 		best = {},
 		depth = Config.Depth.Start,
+		cubes = { [Cubes.Default] = 1 },
+		equipped = Cubes.Default,
+		receipts = {},
 		lastSeen = 0,
 	}
 end
@@ -75,6 +83,26 @@ local function migrate(raw: any): PlayerData
 	end
 	data.version = Config.Save.SchemaVersion
 	return data :: PlayerData
+end
+
+-- Repair what a bad save or an old schema could leave behind.
+local function sanitise(data: PlayerData)
+	for key, value in data.best :: { [string]: any } do
+		if type(value) ~= "number" or value <= 0 then
+			data.best[key] = nil
+		end
+	end
+	for id, count in data.cubes :: { [string]: any } do
+		if not Cubes.get(id) or type(count) ~= "number" or count < 1 then
+			data.cubes[id] = nil
+		end
+	end
+	if not data.cubes[Cubes.Default] then
+		data.cubes[Cubes.Default] = 1
+	end
+	if not data.cubes[data.equipped] then
+		data.equipped = Cubes.Default
+	end
 end
 
 local function keyFor(player: Player): string
@@ -133,12 +161,7 @@ function SaveService.load(player: Player): (PlayerData, boolean)
 	end
 
 	local data = migrate(loaded)
-	-- Best times are a map of depth -> seconds; drop anything that is not.
-	for key, value in data.best :: { [string]: any } do
-		if type(value) ~= "number" or value <= 0 then
-			data.best[key] = nil
-		end
-	end
+	sanitise(data)
 	if not player.Parent then
 		-- They left during the retries. Registering a session now would
 		-- autosave a ghost forever; hand the data back and forget it.
@@ -158,6 +181,16 @@ end
 function SaveService.get(player: Player): PlayerData?
 	local session = sessions[player]
 	return if session then session.data else nil
+end
+
+--[[
+	Can this session be written back? False after a failed load or a
+	conflict; a purchase must not be granted to a session that cannot
+	keep it.
+]]
+function SaveService.canSave(player: Player): boolean
+	local session = sessions[player]
+	return session ~= nil and not session.loadFailed and not session.conflicted
 end
 
 --[[
