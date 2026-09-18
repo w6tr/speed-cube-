@@ -14,13 +14,12 @@
 	pitched 30 degrees down, with 55 degrees of view. That puts the top of
 	the picture 2.5 degrees BELOW the horizon, so the frame's ceiling falls
 	about a stud per 23 studs of distance: the engine measures it landing
-	on the back wall at y = 6.50, 63 studs out.
+	on the fourth row of seating at y = 6.77, 56 studs out.
 
 	That is the CENTRE of the frame. The corners of a wide screen look
-	along rays that fall more slowly -- about y = 7.7 at the back wall on a
-	21:9 monitor, 8.2 on an ultrawide. (Roblox's FieldOfView is vertical,
-	so a narrow phone screen sees the same height and less width: narrow is
-	always the safe case.) Config.Arena.SeenHeight is therefore the height
+	along rays that fall more slowly and reach y = 8.46 on an ultrawide.
+	(Roblox's FieldOfView is vertical, so a narrow phone screen sees the
+	same height and less width: narrow is always the safe case.) Config.Arena.SeenHeight is therefore the height
 	below which detail is WORTH building, not a promise that nothing above
 	it is ever visible. The wall is 17 studs tall so that the corner case
 	stays covered; do not trim it to SeenHeight.
@@ -50,6 +49,11 @@ type PartOptions = {
 	material: Enum.Material?,
 	transparency: number?,
 	shadow: boolean?,
+	-- ringSegment only: how much wider than its slot each box is built.
+	-- A little hides the seams on big dark panels. On anything that GLOWS
+	-- it must be near zero, because two overlapping Neon parts are twice
+	-- as bright as one and the ring turns into dashes.
+	overlap: number?,
 }
 
 local function part(
@@ -122,9 +126,13 @@ local function ringSegment(
 	color: Color3,
 	options: PartOptions?
 ): Part
+	local o: PartOptions = options or {}
 	local angle = (index - 1) / count * math.pi * 2
 	local position = Vector3.new(math.cos(angle) * radius, y, math.sin(angle) * radius)
-	local width = 2 * math.pi * radius / count + 0.2
+	-- The chord, not the arc: a box is straight and the ring is not, so
+	-- using the arc length would leave every box overlapping its
+	-- neighbours at the ends.
+	local width = 2 * radius * math.sin(math.pi / count) + (o.overlap or 0.2)
 	local cframe = CFrame.lookAt(position, Vector3.new(0, y, 0))
 	return part(parent, name, Vector3.new(width, height, thickness), cframe, color, options)
 end
@@ -212,19 +220,6 @@ local function buildBarrier(parent: Instance)
 			0.5,
 			B.Color
 		)
-		ringSegment(
-			folder,
-			`Trim{i}`,
-			i,
-			B.Segments,
-			B.Radius,
-			B.Height + B.TrimHeight / 2,
-			B.TrimHeight,
-			0.56,
-			B.TrimColor,
-			{ material = Enum.Material.Neon }
-		)
-
 		local text = B.Texts[(i - 1) % #B.Texts + 1]
 		if text ~= "" then
 			local gui = Instance.new("SurfaceGui")
@@ -254,6 +249,24 @@ local function buildBarrier(parent: Instance)
 			cap.MaxTextSize = B.TextSize
 			cap.Parent = label
 		end
+	end
+
+	-- The glowing rail along the top, on its own much finer ring and with
+	-- no overlap. Two Neon boxes laid over each other are twice as bright
+	-- as one, so an overlapping ring glows in dashes.
+	for i = 1, B.TrimSegments do
+		ringSegment(
+			folder,
+			`Trim{i}`,
+			i,
+			B.TrimSegments,
+			B.Radius,
+			B.Height + B.TrimHeight / 2,
+			B.TrimHeight,
+			0.56,
+			B.TrimColor,
+			{ material = Enum.Material.Neon, overlap = 0.01 }
+		)
 	end
 end
 
@@ -322,19 +335,42 @@ local function buildWall(parent: Instance)
 	folder.Parent = parent
 
 	for i = 1, W.Segments do
-		ringSegment(folder, `Panel{i}`, i, W.Segments, W.Radius, W.Height / 2, W.Height, 1, W.Color)
-		ringSegment(
+		local panel = ringSegment(
 			folder,
-			`Led{i}`,
+			`Panel{i}`,
 			i,
 			W.Segments,
-			W.Radius - 0.55,
-			W.LedHeight,
-			W.LedThickness,
-			0.2,
-			W.LedColor,
-			{ material = Enum.Material.Neon }
+			W.Radius,
+			W.Height / 2,
+			W.Height,
+			1,
+			W.Color
 		)
+
+		-- The light band is PAINTED on the panel's inner face, not built as
+		-- a second ring of Neon boxes. A ring of boxes is a polygon whose
+		-- corners stand proud of the circle and overlap their neighbours,
+		-- and two Neon parts on top of each other glow twice as hard -- so
+		-- the band came out in dashes. Painted, it follows the panel
+		-- exactly, is the same brightness end to end, and costs no parts.
+		local gui = Instance.new("SurfaceGui")
+		gui.Name = "Led"
+		gui.Face = Enum.NormalId.Front -- the face looking at the middle
+		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		gui.PixelsPerStud = 8
+		gui.LightInfluence = 0
+		gui.Parent = panel
+
+		-- On a side face a SurfaceGui's up is the part's +Y, so scale 0 is
+		-- the top of the wall and 1 the floor.
+		local band = Instance.new("Frame")
+		band.Name = "Band"
+		band.AnchorPoint = Vector2.new(0.5, 0.5)
+		band.Position = UDim2.fromScale(0.5, 1 - W.LedHeight / W.Height)
+		band.Size = UDim2.fromScale(1, W.LedThickness / W.Height)
+		band.BackgroundColor3 = W.LedColor
+		band.BorderSizePixel = 0
+		band.Parent = gui
 	end
 end
 

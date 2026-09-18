@@ -129,6 +129,13 @@ Config.Cube = {
 		PulseSeconds = 0.6,
 		TextSize = 120,
 	},
+	-- How bright the stickers are drawn. Above about 1.0 an ordinary white
+	-- or yellow sticker passes Config.Look.Bloom.Threshold under a station
+	-- lamp and the CUBE starts glowing, which is meant to be a cosmetic you
+	-- unlock, not something every cube does. Glow-tier cubes (Defs/Cubes
+	-- look.glow) get the high one on purpose -- that IS the cosmetic.
+	StickerBrightness = 1.0,
+	GlowStickerBrightness = 2.0,
 	PopScale = 1.18, -- the cube swells to this on a solve
 	PopSeconds = 0.35,
 	ShakeStuds = 0.18, -- wrong-swipe wobble
@@ -224,13 +231,22 @@ Config.Look = {
 		Glare = 0.4,
 		Haze = 1.6,
 	},
-	-- Bloom is the workhorse: it is what turns a Neon sticker into a light
-	-- source. Threshold sits just under Neon's brightness so only the
-	-- emissive parts bleed, not the whole floor.
+	-- Bloom is what turns a Neon part into a light source. Threshold -- the
+	-- brightness at which a surface starts to glow -- is the most delicate
+	-- number in the game. Too low and the
+	-- CUBE blooms -- a white or yellow sticker under a station lamp is
+	-- brighter than you think -- which steals the glow that is supposed to
+	-- be an Epic/Legendary cosmetic. Too high and the arena's neon stops
+	-- glowing and the hall goes flat.
+	--
+	-- If the cube glows again: raise Threshold, or lower
+	-- Config.Cube.StickerBrightness.
+	-- If the arena stops glowing: lower Threshold.
+	-- If the glow is the right places but too strong: lower Intensity.
 	Bloom = {
-		Intensity = 1.1,
-		Size = 28,
-		Threshold = 0.9,
+		Intensity = 0.6,
+		Size = 22,
+		Threshold = 1.05,
 	},
 	Correction = {
 		Brightness = 0.0,
@@ -310,6 +326,12 @@ Config.Arena = {
 		Radius = 27,
 		Height = 3.2,
 		Segments = 24,
+		-- The glowing rail gets its OWN, much finer ring. A ring of tangent
+		-- boxes is a polygon: at 24 segments each box's corners stand about a
+		-- third of a stud proud of the circle, which on a rail a sixth of a
+		-- stud thick means the corners double up, glow harder than the middles
+		-- and the whole rail reads as dashes instead of a line.
+		TrimSegments = 56,
 		Color = Color3.fromRGB(15, 17, 23),
 		TrimColor = Color3.fromRGB(72, 190, 255),
 		TrimHeight = 0.16,
@@ -353,9 +375,13 @@ Config.Arena = {
 		Height = 17,
 		Segments = 24,
 		Color = Color3.fromRGB(13, 15, 20),
+		-- The wall's light band is PAINTED on the panels rather than built as
+		-- a second ring of parts: painted, it follows each panel exactly, so
+		-- there are no protruding corners to glow brighter than the rest, and
+		-- it costs no parts at all.
 		LedColor = Color3.fromRGB(58, 120, 220),
 		LedHeight = 5.8, -- inside the seen band on purpose
-		LedThickness = 0.35,
+		LedThickness = 0.5,
 	},
 
 	-- Above the frame in play; there for the store shots.

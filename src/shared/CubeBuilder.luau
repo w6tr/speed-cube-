@@ -94,7 +94,9 @@ function CubeBuilder.applyLook(cube: Cube, look: Cubes.Look)
 				glow.Color = color
 				glow.Enabled = glowStickers
 				child.LightInfluence = if glowStickers then 0 else 0.6
-				child.Brightness = if glowStickers then 2 else 1.2
+				child.Brightness = if glowStickers
+					then Config.Cube.GlowStickerBrightness
+					else Config.Cube.StickerBrightness
 			end
 		end
 	end
