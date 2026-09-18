@@ -58,7 +58,9 @@ function Theme.frame(
 	frame.Size = size
 	frame.Position = position
 	frame.BackgroundColor3 = color or Theme.Colors.Surface
-	frame.BackgroundTransparency = if color then 0 else 0.15
+	-- Near-opaque on purpose: these panels sit over a 3D hall, and world
+	-- text behind them bled straight through at 0.15.
+	frame.BackgroundTransparency = if color then 0 else 0.04
 	frame.BorderSizePixel = 0
 	frame.Parent = parent
 	Theme.corner(frame, 10)

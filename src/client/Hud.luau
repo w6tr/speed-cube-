@@ -168,6 +168,14 @@ function Hud.build(parent: Instance, callbacks: Callbacks): Api
 			color = C.InkSoft,
 		}
 	)
+	-- The leaderboard board stands directly behind this line from every
+	-- seat, and the two were printing THROUGH each other -- "BEST 4.08s at
+	-- depth 9" and "no solves yet" interleaved into unreadable nonsense
+	-- that also contradicted itself. HUD text must never share pixels with
+	-- world text, so it gets a plate to sit on.
+	bestLabel.BackgroundColor3 = C.Surface
+	bestLabel.BackgroundTransparency = 0.2
+	Theme.corner(bestLabel, 6)
 
 	----------------------------------------------------------------------------
 	-- Hint, nudge, dial, CUBES

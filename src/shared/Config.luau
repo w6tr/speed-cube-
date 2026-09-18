@@ -121,13 +121,31 @@ Config.Cube = {
 	},
 	-- The arrow prompt: a see-through slab floating just off the front face
 	-- over the row or column that has to turn.
+	-- THE ARROW IS THE INTERFACE, not decoration. Most players cannot solve
+	-- a cube and are never meant to learn: the arrow is the whole reason the
+	-- game is playable, so it must be the second-strongest read on screen
+	-- after the cube itself, on every sticker colour, at any size.
+	--
+	-- Two things were wrong. It was WHITE, which is a sticker colour, so on
+	-- a white face it vanished; and the pulse faded it to 55% transparent,
+	-- so half of every second it was a grey ghost over a green sticker.
+	-- Magenta appears nowhere on a cube, and the pulse now breathes over a
+	-- narrow range that never lets the arrow get faint.
+	--
+	-- SKINNING (for per-cube arrows): only Color and Glow may ever vary per
+	-- cube. Size, Stroke and the pulse range are the readable skeleton and
+	-- stay fixed, or a cube you unlock could be harder to play than the one
+	-- you started with.
 	Arrow = {
 		Offset = 0.18, -- studs in front of the face
-		Color = Color3.fromRGB(255, 255, 255),
+		Color = Color3.fromRGB(255, 64, 180),
 		WrongColor = Color3.fromRGB(255, 70, 70), -- the arrow flashes this on a wrong swipe
 		WrongFlashSeconds = 0.25,
-		PulseSeconds = 0.6,
-		TextSize = 120,
+		PulseSeconds = 0.75,
+		PulseTransparency = 0.12, -- never faint enough to lose
+		TextSize = 150,
+		StrokeColor = Color3.fromRGB(10, 6, 14),
+		StrokeThickness = 5, -- holds the shape over any sticker colour
 	},
 	-- How bright the stickers are drawn. Above about 1.0 an ordinary white
 	-- or yellow sticker passes Config.Look.Bloom.Threshold under a station
@@ -187,10 +205,10 @@ Config.Lobby = {
 	-- The hall is dark and lit from above (Config.Look), so these are
 	-- much darker than they read here: a light pool falls on each of them.
 	Colors = {
-		Floor = Color3.fromRGB(21, 23, 30),
-		Ring = Color3.fromRGB(30, 33, 43), -- the stage disc inside the ring
-		Pedestal = Color3.fromRGB(34, 38, 49),
-		Trim = Color3.fromRGB(72, 190, 255), -- the station LED. Gold stays for coins.
+		Floor = Color3.fromRGB(38, 44, 58),
+		Ring = Color3.fromRGB(48, 56, 72), -- the stage disc inside the ring
+		Pedestal = Color3.fromRGB(54, 62, 80),
+		Trim = Color3.fromRGB(34, 92, 145), -- the station LED. Gold stays for coins.
 	},
 }
 
@@ -216,9 +234,13 @@ Config.Look = {
 	-- It is set in default.project.json, currently ShadowMap.
 	ClockTime = 0, -- midnight: the hall lights itself
 	Brightness = 1.1,
-	Ambient = Color3.fromRGB(26, 28, 42), -- the darkest a lit surface gets
-	OutdoorAmbient = Color3.fromRGB(16, 18, 28),
-	ExposureCompensation = 0.2,
+	-- Raised off black on purpose. A room whose only values are BLACK and
+	-- BLOWN OUT reads as both "empty" and "too bright" at the same time --
+	-- there is no middle for a coin burst, a rim light or a confetti pop to
+	-- read against. The middle is what makes the rest legible.
+	Ambient = Color3.fromRGB(34, 38, 54),
+	OutdoorAmbient = Color3.fromRGB(24, 28, 40),
+	ExposureCompensation = 0.05,
 	EnvironmentDiffuseScale = 0.2,
 	EnvironmentSpecularScale = 0.35,
 	-- Haze. Distance fades to this colour, which is what stops the far
@@ -243,15 +265,20 @@ Config.Look = {
 	-- Config.Cube.StickerBrightness.
 	-- If the arena stops glowing: lower Threshold.
 	-- If the glow is the right places but too strong: lower Intensity.
+	-- Threshold is set ABOVE what a white sticker reaches when a station
+	-- lamp is on it. That was the bug: 1.05 cleared an UNLIT white sticker
+	-- and a lit one sailed straight over it, so the cube glowed. Only a
+	-- genuinely emissive thing passes 1.4 now -- which means a glow-tier
+	-- cube, and nothing else. Glow is a cosmetic you unlock.
 	Bloom = {
-		Intensity = 0.6,
-		Size = 22,
-		Threshold = 1.05,
+		Intensity = 0.7,
+		Size = 18,
+		Threshold = 1.4,
 	},
 	Correction = {
 		Brightness = 0.0,
-		Contrast = 0.18,
-		Saturation = 0.14,
+		Contrast = 0.1,
+		Saturation = 0.12,
 		TintColor = Color3.fromRGB(246, 248, 255),
 	},
 	-- Softens the far side of the hall so the eye stays on the cube. The
@@ -315,8 +342,8 @@ Config.Arena = {
 		StageMaterial = Enum.Material.SmoothPlastic,
 		-- Painted rings on the floor, like a competition hall's markings.
 		Lines = {
-			{ Radius = 20.5, Width = 0.6, Color = Color3.fromRGB(58, 66, 84), Neon = false },
-			{ Radius = 25.4, Width = 0.22, Color = Color3.fromRGB(72, 190, 255), Neon = true },
+			{ Radius = 20.5, Width = 0.6, Color = Color3.fromRGB(78, 90, 112), Neon = false },
+			{ Radius = 25.4, Width = 0.22, Color = Color3.fromRGB(36, 96, 150), Neon = true },
 		},
 	},
 
@@ -325,15 +352,15 @@ Config.Arena = {
 	Barrier = {
 		Radius = 27,
 		Height = 3.2,
-		Segments = 24,
+		Segments = 40,
 		-- The glowing rail gets its OWN, much finer ring. A ring of tangent
 		-- boxes is a polygon: at 24 segments each box's corners stand about a
 		-- third of a stud proud of the circle, which on a rail a sixth of a
 		-- stud thick means the corners double up, glow harder than the middles
 		-- and the whole rail reads as dashes instead of a line.
-		TrimSegments = 56,
-		Color = Color3.fromRGB(15, 17, 23),
-		TrimColor = Color3.fromRGB(72, 190, 255),
+		TrimSegments = 72,
+		Color = Color3.fromRGB(28, 32, 42),
+		TrimColor = Color3.fromRGB(36, 96, 150),
 		TrimHeight = 0.16,
 		TextColor = Color3.fromRGB(226, 236, 255),
 		TextSize = 38,
@@ -355,7 +382,7 @@ Config.Arena = {
 	Stands = {
 		InnerRadius = 29,
 		Rows = 4,
-		Segments = 24,
+		Segments = 32,
 		RowDepth = 2.2,
 		-- The bank stands on a platform. Without one the first rows are
 		-- SHORTER than the hoardings in front of them and nobody ever sees
@@ -363,9 +390,9 @@ Config.Arena = {
 		-- reaches the seating, so a row has to top out above that.
 		Base = 3.6,
 		RowRise = 1.15,
-		Color = Color3.fromRGB(26, 29, 38),
-		AltColor = Color3.fromRGB(33, 37, 48),
-		SeatColor = Color3.fromRGB(46, 53, 70),
+		Color = Color3.fromRGB(40, 46, 60),
+		AltColor = Color3.fromRGB(48, 55, 70),
+		SeatColor = Color3.fromRGB(64, 74, 94),
 		Seats = 28, -- little blocks along the front row, to give the bank a scale
 		SeatRise = 0.45,
 	},
@@ -373,13 +400,13 @@ Config.Arena = {
 	Wall = {
 		Radius = 41,
 		Height = 17,
-		Segments = 24,
-		Color = Color3.fromRGB(13, 15, 20),
+		Segments = 32,
+		Color = Color3.fromRGB(26, 30, 40),
 		-- The wall's light band is PAINTED on the panels rather than built as
 		-- a second ring of parts: painted, it follows each panel exactly, so
 		-- there are no protruding corners to glow brighter than the rest, and
 		-- it costs no parts at all.
-		LedColor = Color3.fromRGB(58, 120, 220),
+		LedColor = Color3.fromRGB(44, 86, 150),
 		LedHeight = 5.8, -- inside the seen band on purpose
 		LedThickness = 0.5,
 	},
@@ -400,9 +427,11 @@ Config.Arena = {
 	Lamp = {
 		Height = 13,
 		HousingColor = Color3.fromRGB(24, 26, 34),
-		LensColor = Color3.fromRGB(200, 224, 255),
+		LensColor = Color3.fromRGB(150, 180, 215),
 		Color = Color3.fromRGB(198, 220, 255),
-		Brightness = 2.6,
+		-- Was 2.6, which drove a lit white sticker straight past the bloom
+		-- threshold and made the cube glow.
+		Brightness = 1.5,
 		Range = 30,
 		Angle = 58,
 	},
@@ -420,7 +449,7 @@ Config.Arena = {
 		-- fifth of a stud of the mat, so anything standing proud of it would
 		-- be clipped straight through on every solve.
 		PadColor = Color3.fromRGB(16, 18, 24),
-		PadRingColor = Color3.fromRGB(72, 190, 255),
+		PadRingColor = Color3.fromRGB(38, 100, 150),
 		PadDiameter = 0.3, -- of the mat, across
 		PadSpread = 0.19, -- each pad this far from the middle of the mat
 		-- Rows down the mat. 0 is the edge nearest the player, 1 the far
@@ -431,10 +460,12 @@ Config.Arena = {
 		NumberColor = Color3.fromRGB(150, 210, 255),
 		NumberSize = 34,
 		GlowRadius = 3.0, -- the lit pool on the floor under the station
-		GlowColor = Color3.fromRGB(96, 150, 230),
-		GlowTransparency = 0.86,
+		-- The mat's edge glow was flaring up onto the cube's bottom row from
+		-- below -- a second, separate cause of "the glow carries over".
+		GlowColor = Color3.fromRGB(70, 110, 175),
+		GlowTransparency = 0.9,
 		LightColor = Color3.fromRGB(150, 190, 255),
-		LightBrightness = 1.4,
+		LightBrightness = 0.9,
 		LightRange = 14,
 	},
 }
@@ -566,9 +597,18 @@ Config.Board = {
 	Height = 4.6,
 	Lines = 4, -- depth records shown (fastest per depth, deepest first)
 	SolverLines = 2, -- most solves this server
-	TextSize = 22,
+	-- Quiet on purpose. Every camera looks ACROSS the middle of the ring, so
+	-- this board is directly behind the cube from all eight seats and its
+	-- text lands on top of the HUD. It is a thing you glance at between
+	-- solves, not a thing that should compete with the cube.
+	TextSize = 17,
+	TextColor = Color3.fromRGB(150, 162, 180),
 	Color = Color3.fromRGB(30, 32, 40),
-	TrimColor = Color3.fromRGB(231, 174, 58),
+	-- NOT bright, and not gold any more. This is the top face of a
+	-- nine-stud-wide slab: from a camera looking down at 30 degrees you see
+	-- the whole square, so anything eye-catching here is a big blank
+	-- rectangle hanging in the middle of the hall saying nothing.
+	TrimColor = Color3.fromRGB(52, 58, 74),
 }
 
 --------------------------------------------------------------------------------

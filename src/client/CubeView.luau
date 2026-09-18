@@ -354,11 +354,19 @@ function CubeView.build(root: CFrame, options: Options?): Api
 		g.Font = Enum.Font.GothamBlack
 		g.TextSize = A.TextSize
 		g.TextColor3 = A.Color
-		g.TextStrokeTransparency = 0.2
-		g.TextStrokeColor3 = Color3.new(0, 0, 0)
 		g.Text = ""
 		g.LayoutOrder = i
 		g.Parent = arrowGui
+
+		-- A real outline, not TextStroke: the arrow has to hold its shape
+		-- over a white sticker, a yellow one and a glowing one, and
+		-- TextStroke is too thin to do that.
+		local outline = Instance.new("UIStroke")
+		outline.Name = "Outline"
+		outline.Color = A.StrokeColor
+		outline.Thickness = A.StrokeThickness
+		outline.Parent = g
+
 		table.insert(glyphs, g)
 	end
 
@@ -384,7 +392,8 @@ function CubeView.build(root: CFrame, options: Options?): Api
 				-1,
 				true
 			)
-			local tween = TweenService:Create(glyphs[1], info, { TextTransparency = 0.55 })
+			local tween =
+				TweenService:Create(glyphs[1], info, { TextTransparency = A.PulseTransparency })
 			tween:Play()
 			pulse = tween
 		end

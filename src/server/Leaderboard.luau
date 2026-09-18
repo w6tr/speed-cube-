@@ -86,7 +86,11 @@ function Leaderboard.build(parent: Instance)
 	cap.Size = Vector3.new(B.Width + 0.4, 0.3, B.Width + 0.4)
 	cap.CFrame = CFrame.new(0, B.Height + 0.55, 0)
 	cap.Color = B.TrimColor
-	cap.Material = Enum.Material.Neon
+	-- NOT Neon. As a nine-stud-wide Neon slab this bloomed into a solid
+	-- yellow rectangle that was the brightest thing on screen, ate its own
+	-- text, and told the player nothing. The board is information; the cube
+	-- is what should be glowing.
+	cap.Material = Enum.Material.SmoothPlastic
 	cap.Anchored = true
 	cap.CanCollide = false
 	cap.Parent = parent
@@ -99,7 +103,7 @@ function Leaderboard.build(parent: Instance)
 		gui.Face = face
 		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
 		gui.PixelsPerStud = 40
-		gui.LightInfluence = 0
+		gui.LightInfluence = 0.35
 		gui.Parent = pillar
 
 		local pad = Instance.new("UIPadding")
@@ -113,7 +117,7 @@ function Leaderboard.build(parent: Instance)
 		label.BackgroundTransparency = 1
 		label.Font = Enum.Font.GothamBold
 		label.TextSize = B.TextSize
-		label.TextColor3 = Color3.fromRGB(236, 239, 243)
+		label.TextColor3 = B.TextColor
 		label.TextXAlignment = Enum.TextXAlignment.Left
 		label.TextYAlignment = Enum.TextYAlignment.Top
 		label.TextWrapped = true
