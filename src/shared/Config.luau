@@ -132,10 +132,12 @@ Config.Cube = {
 	-- Magenta appears nowhere on a cube, and the pulse now breathes over a
 	-- narrow range that never lets the arrow get faint.
 	--
-	-- SKINNING (for per-cube arrows): only Color and Glow may ever vary per
-	-- cube. Size, Stroke and the pulse range are the readable skeleton and
-	-- stay fixed, or a cube you unlock could be harder to play than the one
-	-- you started with.
+	-- SKINNING: per-cube arrows are an M4 cosmetic (CEO, 2026-09-17 -- they
+	-- wait for the other cosmetics rather than shipping with M2's boxes).
+	-- When they land, only Color and Glow may ever vary per cube. Size,
+	-- Stroke and the pulse range are the READABLE SKELETON and stay fixed:
+	-- a cube you unlock must never be harder to play than the one you
+	-- started with, and the arrow is the whole reason the game is playable.
 	Arrow = {
 		Offset = 0.18, -- studs in front of the face
 		Color = Color3.fromRGB(255, 64, 180),
