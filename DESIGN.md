@@ -74,6 +74,54 @@ streak are the whole game.
 
 **Decisions taken 2026-09-17 (CEO):** cubes DO have power (a coin multiplier, capped around +50% for the best); rebirth lands in M3 after boxes exist; the economy runs on coins only until it is tuned on real play, but the Robux purchase plumbing ships in M2 with blank product ids so it can be switched on without code; public release tentatively after M2; the name "Speed Cube" is a placeholder to revisit.
 
+## The look
+
+**Decided 2026-09-17 (CEO): a speedcubing competition floor, staged like
+an esports final.** Real competition furniture — mats, timer pads,
+station numbers, hoardings round the floor, a raked bank of seating — lit
+the way a final is lit: a dark hall at night, coloured rim light, bloom,
+haze, every cube the brightest thing in its own frame. The authenticity
+is what gives the game an identity no other Roblox cube game has taken;
+the staging is what makes it worth clicking.
+
+### The one fact the whole hall is built on
+
+**The camera is locked and nobody can look around.** `CameraRig`
+re-applies it every `RenderStepped`, so all eight seats see the same
+picture forever: eye at y = 9.1, pitched 30° down at the cube, 55° field
+of view. That puts the TOP edge of the frame 2.5° *below* the horizon —
+the frame's ceiling falls about a stud for every 23 studs of distance.
+Measured in the engine by `tools/smoke-arena.luau`: the top of the
+picture lands on the back wall at **y = 6.5, 63 studs out**.
+
+So a tall wall, a roof and a lighting truss are invisible during play.
+Everything a player will ever see lives between the floor and about 7
+studs (`Config.Arena.SeenHeight`), which is exactly what a competition
+floor is anyway. The detail budget goes there; the truss and the lamp
+housings exist only so a free camera has something overhead for the store
+icon.
+
+### Where it lives
+
+| | |
+|---|---|
+| `Config.Look` | the lighting rig's numbers |
+| `Config.Arena` | the hall: radii, heights, colours, the hoarding texts |
+| `src/server/Look.luau` | applies the rig at boot |
+| `src/server/Arena.luau` | builds the hall around the ring (339 parts) |
+| `default.project.json` | the same lighting again, for Studio's edit view, plus `Technology` — which a script may neither read nor write |
+
+`Arena` never touches a pedestal CFrame; it only positions things *from*
+them, so the camera, the cube and every spectator copy stay exactly where
+the rest of the game puts them.
+
+### Still to do
+
+The centre board, the crowd, per-tier cube VFX (a light and a sparkle on
+the Epics and the Legendary), and hall lighting that answers a combo and
+a pop. Then the store icon and thumbnails, shot in-engine with a free
+camera.
+
 ## Naming
 
 "Rubik's" is Spin Master's trademark and their brand guide forbids third

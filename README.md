@@ -117,10 +117,23 @@ Checks every cube definition (tier, six colours, multiplier inside its
 tier's range and under the cap), that each box's odds add to 100, and
 that 20,000 rolls per box land on the printed odds.
 
-Neither can see the 3D placement, the UI or the remotes. For those there
-is a real-engine loop: `rojo build` a place, then
+None of those can see the 3D placement, the UI or the remotes. For those
+there is a real-engine loop: `rojo build` a place, then
 `~/.rokit/bin/run-in-roblox --place <it> --script <a smoke script>` runs
 the script inside a throwaway Studio window and prints its output here.
+
+```bash
+~/.rokit/bin/rojo build default.project.json -o build/smoke.rbxl
+~/.rokit/bin/run-in-roblox --place build/smoke.rbxl --script tools/smoke-arena.luau
+```
+
+That one builds the hall out of the real `Look`, `LobbyBuilder` and
+`Arena` modules and then MEASURES it: the part count, that the lighting
+rig took, that no seat has its camera buried in scenery, that a popping
+cube still clears the station mat, and how high up the far side of the
+hall a player can actually see. run-in-roblox drives Studio in EDIT mode,
+as a plugin, so the game's own server scripts never run and the script
+boots the world itself.
 
 ## Checks before every push
 

@@ -10,6 +10,7 @@
 	  Config.luau           the numbers, and what each one does
 	  DESIGN.md             why the game is shaped like this
 	  Moves.luau            what a move is, and the direction each one prompts
+	  Look.luau / Arena.luau  the lighting rig and the hall it lights
 	  SolveService.luau     the deal / swipe / solve loop
 	  CubeService.luau      boxes, hatching, equipping, Robux
 	  CubeView.luau         how the client draws and turns the cube
@@ -23,8 +24,10 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Remotes = require(Shared.Remotes)
 
+local Arena = require(script.Arena)
 local Leaderboard = require(script.Leaderboard)
 local LobbyBuilder = require(script.LobbyBuilder)
+local Look = require(script.Look)
 local CubeService = require(script.Services.CubeService)
 local SaveService = require(script.Services.SaveService)
 local SolveService = require(script.Services.SolveService)
@@ -33,7 +36,9 @@ local SolveService = require(script.Services.SolveService)
 -- World and services
 --------------------------------------------------------------------------------
 
+Look.apply()
 local world = LobbyBuilder.build()
+Arena.build(world.folder, world.pedestals)
 Leaderboard.build(world.folder)
 SolveService.init(world.pedestals)
 CubeService.init({

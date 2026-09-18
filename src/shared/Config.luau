@@ -14,6 +14,8 @@
 	  Cube      the 3D cube: size, gaps, turn speed, the arrow prompt
 	  Camera    where the camera sits relative to the pedestal
 	  Lobby     the ring of pedestals
+	  Look      the lighting rig: how dark the hall is and what glows
+	  Arena     the hall around the ring, and what of it is ever on screen
 	  Input     swipe thresholds and the keys
 	  Sounds    which built-in Roblox sounds play
 	  Save      DataStore settings
@@ -100,7 +102,12 @@ Config.Cube = {
 	StickerInset = 0.1, -- sticker is this much smaller than the cubie face, each side
 	TurnSeconds = 0.11, -- one prompted turn
 	ShuffleTurnSeconds = 0.04, -- one turn during the scramble animation
-	Height = 1.9, -- cube centre above the pedestal top (clear of the pedestal when it pops)
+	-- Cube centre above the pedestal top. At full pop the cube swells to
+	-- PopScale about its centre, so its underside drops to
+	-- Height - 1.58 * PopScale = 0.19 studs: enough to clear the station mat
+	-- Arena.luau lays on the plinth. At the old 1.9 the gap was 0.04 and the
+	-- mat was clipped through on every solve.
+	Height = 2.05,
 	Body = Color3.fromRGB(20, 20, 24),
 	-- Sticker colours, by face. Standard colour scheme: white up, yellow
 	-- down, green front, blue back, red right, orange left.
@@ -170,11 +177,213 @@ Config.Lobby = {
 	PedestalHeight = 2.6,
 	StandBack = 2.6, -- the avatar stands this far behind the cube (toward the ring centre)
 	HipHeight = 3.2, -- the avatar's root part above the floor when placed
+	-- The hall is dark and lit from above (Config.Look), so these are
+	-- much darker than they read here: a light pool falls on each of them.
 	Colors = {
-		Floor = Color3.fromRGB(38, 40, 48),
-		Ring = Color3.fromRGB(52, 56, 68),
-		Pedestal = Color3.fromRGB(70, 74, 90),
-		Trim = Color3.fromRGB(231, 174, 58),
+		Floor = Color3.fromRGB(21, 23, 30),
+		Ring = Color3.fromRGB(30, 33, 43), -- the stage disc inside the ring
+		Pedestal = Color3.fromRGB(34, 38, 49),
+		Trim = Color3.fromRGB(72, 190, 255), -- the station LED. Gold stays for coins.
+	},
+}
+
+--------------------------------------------------------------------------------
+-- Look: the lighting rig
+--------------------------------------------------------------------------------
+--[[
+	The hall is indoors at night. The sun is below the horizon and every
+	stud of light comes from this rig and the lamps hanging over the
+	stations -- which is the whole reason a Neon cube reads as glowing
+	instead of as one more grey part under a midday sun.
+
+	Technology lives in default.project.json, because a script may neither
+	read nor write it. ShadowMap keeps the sun's shadows and lets local lights
+	light for almost nothing, because under it they cast no shadows of
+	their own. Future makes all eight station lamps cast real shadows and
+	costs far more on a phone. Flip it in default.project.json to compare,
+	but test on a phone before shipping it.
+]]
+Config.Look = {
+	-- NOTE: Lighting.Technology is not here because a script may neither
+	-- read nor write it (it throws "lacking capability RobloxScript").
+	-- It is set in default.project.json, currently ShadowMap.
+	ClockTime = 0, -- midnight: the hall lights itself
+	Brightness = 1.1,
+	Ambient = Color3.fromRGB(26, 28, 42), -- the darkest a lit surface gets
+	OutdoorAmbient = Color3.fromRGB(16, 18, 28),
+	ExposureCompensation = 0.2,
+	EnvironmentDiffuseScale = 0.2,
+	EnvironmentSpecularScale = 0.35,
+	-- Haze. Distance fades to this colour, which is what stops the far
+	-- side of the hall from looking like cardboard standing in a void.
+	Atmosphere = {
+		Density = 0.32,
+		Offset = 0.15,
+		Color = Color3.fromRGB(58, 72, 112),
+		Decay = Color3.fromRGB(28, 34, 58),
+		Glare = 0.4,
+		Haze = 1.6,
+	},
+	-- Bloom is the workhorse: it is what turns a Neon sticker into a light
+	-- source. Threshold sits just under Neon's brightness so only the
+	-- emissive parts bleed, not the whole floor.
+	Bloom = {
+		Intensity = 1.1,
+		Size = 28,
+		Threshold = 0.9,
+	},
+	Correction = {
+		Brightness = 0.0,
+		Contrast = 0.18,
+		Saturation = 0.14,
+		TintColor = Color3.fromRGB(246, 248, 255),
+	},
+	-- Softens the far side of the hall so the eye stays on the cube. The
+	-- cube sits about 8 studs from the camera.
+	Depth = {
+		FocusDistance = 9,
+		InFocusRadius = 20,
+		FarIntensity = 0.28,
+		NearIntensity = 0,
+	},
+}
+
+--------------------------------------------------------------------------------
+-- Arena: the hall around the ring
+--------------------------------------------------------------------------------
+--[[
+	WHAT THE PLAYER ACTUALLY SEES, and why this section is shaped the way
+	it is.
+
+	The camera is locked (CameraRig re-applies it every frame, so nobody
+	can look around). It sits 23.5 studs out from the middle at y = 9.1
+	and looks DOWN at the cube by 30 degrees; the field of view is 55, so
+	the TOP edge of the picture is already 2.5 degrees BELOW the horizon.
+	The frame's ceiling therefore drops one stud for every 23 studs of
+	distance: about y = 7 across the hall, y = 6.3 at the back wall.
+
+	So the detail budget goes into the band from the floor to `SeenHeight`
+	-- the floor itself, the barrier boards, the front rows of seating --
+	and everything above it (the wall's upper half, the truss, the lamps)
+	is built cheap, because it is only ever seen in a free-camera shot for
+	the store icon.
+
+	Radii, from the middle out:
+	   0     the leaderboard board (kept under 5 studs, see Config.Board)
+	  16     the ring of stations (Config.Lobby.Radius)
+	  23.5   every player's camera
+	  27     the barrier boards around the competition floor
+	  29-40  the seating
+	  41     the back wall
+]]
+Config.Arena = {
+	SeenHeight = 7, -- above this, nothing is seen while playing
+
+	Floor = {
+		-- The floor and stage COLOURS live in Config.Lobby.Colors, which is
+		-- what LobbyBuilder already builds them from. Only the surface and
+		-- the painted markings are here.
+		Material = Enum.Material.Concrete,
+		StageMaterial = Enum.Material.SmoothPlastic,
+		-- Painted rings on the floor, like a competition hall's markings.
+		Lines = {
+			{ Radius = 20.5, Width = 0.6, Color = Color3.fromRGB(58, 66, 84), Neon = false },
+			{ Radius = 25.4, Width = 0.22, Color = Color3.fromRGB(72, 190, 255), Neon = true },
+		},
+	},
+
+	-- The hoardings around the floor: low boards carrying the event name,
+	-- exactly where a real competition puts its sponsors.
+	Barrier = {
+		Radius = 27,
+		Height = 3.2,
+		Segments = 24,
+		Color = Color3.fromRGB(15, 17, 23),
+		TrimColor = Color3.fromRGB(72, 190, 255),
+		TrimHeight = 0.16,
+		TextColor = Color3.fromRGB(226, 236, 255),
+		TextSize = 38,
+		-- Cycled around the ring, one per segment.
+		Texts = {
+			"SPEED CUBE OPEN",
+			"",
+			"FINALS",
+			"",
+			"SPEED CUBE OPEN",
+			"",
+			"ROUND 8",
+			"",
+		},
+	},
+
+	-- Tiered seating. Only the first four or five rows are ever in frame,
+	-- so they are built as concentric cylinders rather than real steps.
+	Stands = {
+		InnerRadius = 29,
+		Rows = 4, -- the fifth would be above SeenHeight anyway
+		Segments = 24,
+		RowDepth = 2.2,
+		RowRise = 1.25,
+		Color = Color3.fromRGB(26, 29, 38),
+		AltColor = Color3.fromRGB(33, 37, 48),
+		SeatColor = Color3.fromRGB(46, 53, 70),
+		Seats = 28, -- little blocks along the front row, to give the bank a scale
+	},
+
+	Wall = {
+		Radius = 41,
+		Height = 17,
+		Segments = 24,
+		Color = Color3.fromRGB(13, 15, 20),
+		LedColor = Color3.fromRGB(58, 120, 220),
+		LedHeight = 5.8, -- inside the seen band on purpose
+		LedThickness = 0.35,
+	},
+
+	-- Above the frame in play; there for the store shots.
+	Truss = {
+		Radius = 19,
+		Height = 14.5,
+		Segments = 24,
+		Thickness = 0.45,
+		Color = Color3.fromRGB(38, 42, 54),
+	},
+
+	-- One lamp over each station. The housing is never seen while
+	-- playing; its light is the whole point.
+	Lamp = {
+		Height = 13,
+		HousingColor = Color3.fromRGB(24, 26, 34),
+		LensColor = Color3.fromRGB(200, 224, 255),
+		Color = Color3.fromRGB(198, 220, 255),
+		Brightness = 2.6,
+		Range = 30,
+		Angle = 58,
+	},
+
+	-- The station itself: a competition mat on the plinth, a pair of
+	-- timer pads in front of the cube, and a pool of light on the floor.
+	Station = {
+		MatColor = Color3.fromRGB(26, 92, 72), -- competition mat green
+		MatSize = 3.8,
+		MatThickness = 0.08,
+		-- The timer pads and the station number are PAINTED on the mat, not
+		-- built out of parts. At full pop the cube swells down to within a
+		-- fifth of a stud of the mat, so anything standing proud of it would
+		-- be clipped straight through on every solve.
+		PadColor = Color3.fromRGB(16, 18, 24),
+		PadRingColor = Color3.fromRGB(72, 190, 255),
+		PadDiameter = 0.3, -- of the mat, across
+		PadSpread = 0.19, -- each pad this far from the middle of the mat
+		PadForward = 0.74, -- 0 is the inward edge, 1 the edge nearest the player
+		NumberColor = Color3.fromRGB(150, 210, 255),
+		NumberSize = 34,
+		GlowRadius = 4.6, -- the lit pool on the floor under the station
+		GlowColor = Color3.fromRGB(96, 150, 230),
+		GlowTransparency = 0.86,
+		LightColor = Color3.fromRGB(150, 190, 255),
+		LightBrightness = 1.4,
+		LightRange = 14,
 	},
 }
 

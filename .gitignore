@@ -17,3 +17,6 @@
 .DS_Store
 Thumbs.db
 /.vscode/settings.local.json
+
+# Built places for the engine smoke tests
+/build/
