@@ -40,6 +40,10 @@ local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Co
 
 local Arena = {}
 
+-- The Lobby folder, remembered at build so the station tints can find
+-- their parts later without every caller having to carry it about.
+local lobby: Instance? = nil
+
 --------------------------------------------------------------------------------
 -- Parts
 --------------------------------------------------------------------------------
@@ -221,7 +225,47 @@ local function buildBarrier(parent: Instance)
 			B.Color
 		)
 		local text = B.Texts[(i - 1) % #B.Texts + 1]
-		if text ~= "" then
+
+		if text == Config.Board.Marker then
+			-- A live records board. Leaderboard.luau fills in the numbers;
+			-- this only lays the panel out, because every board round the
+			-- ring has to look the same and each is read from fifty studs.
+			local R = Config.Board
+			local gui = Instance.new("SurfaceGui")
+			gui.Name = "Records"
+			gui.Face = Enum.NormalId.Front
+			gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+			gui.PixelsPerStud = 32
+			gui.LightInfluence = 0.1
+			gui.Parent = board
+
+			local panel = Instance.new("Frame")
+			panel.Name = "Panel"
+			panel.Size = UDim2.fromScale(1, 1)
+			panel.BackgroundColor3 = R.PanelColor
+			panel.BackgroundTransparency = R.PanelTransparency
+			panel.BorderSizePixel = 0
+			panel.Parent = gui
+
+			local function row(name: string, y: number, height: number, size: number, color: Color3)
+				local label = Instance.new("TextLabel")
+				label.Name = name
+				label.AnchorPoint = Vector2.new(0.5, 0.5)
+				label.Position = UDim2.fromScale(0.5, y)
+				label.Size = UDim2.fromScale(0.94, height)
+				label.BackgroundTransparency = 1
+				label.Font = Enum.Font.GothamBlack
+				label.TextSize = size
+				label.TextColor3 = color
+				label.Text = ""
+				label.Parent = panel
+				return label
+			end
+
+			row("Header", 0.16, 0.22, R.HeaderSize, R.HeaderColor).Text = R.HeaderText
+			row("Time", 0.46, 0.44, R.TimeSize, R.TimeColor)
+			row("Sub", 0.8, 0.22, R.SubSize, R.SubColor)
+		elseif text ~= "" then
 			local gui = Instance.new("SurfaceGui")
 			gui.Name = "Hoarding"
 			gui.Face = Enum.NormalId.Front -- the face looking at the middle
@@ -581,6 +625,45 @@ function Arena.build(parent: Instance, pedestals: { CFrame })
 	buildWall(parent)
 	buildRig(parent, pedestals)
 	buildStations(parent, pedestals, floorTop)
+	lobby = parent
+end
+
+--------------------------------------------------------------------------------
+-- Rarity, made visible
+--------------------------------------------------------------------------------
+--[[
+	Colour station `index` for the tier of the cube that player has on.
+	`tier` of nil resets it to the house colour (nobody there).
+
+	This runs on the SERVER so it replicates to everyone: the whole point
+	is that the other seven players can see you are holding a Legendary
+	from across the hall. Doing it client-side would miss your own station,
+	because Spectators skips your own pedestal.
+
+	Cheap on purpose -- two part colours, no new instances, nothing to
+	clean up when a player leaves.
+]]
+function Arena.setStationTier(index: number, tier: string?)
+	local folder = lobby
+	if not folder then
+		return
+	end
+	local S = Config.Arena.Station
+	local color = (tier and S.TierTint[tier]) or Config.Lobby.Colors.Trim
+
+	local station = folder:FindFirstChild("Stations")
+	station = station and station:FindFirstChild(`Station{index}`)
+	local pool = station and station:FindFirstChild("Pool")
+	if pool and pool:IsA("BasePart") then
+		pool.Color = color
+	end
+
+	-- The plinth's own LED ring, which LobbyBuilder built.
+	local pedestal = folder:FindFirstChild(`Pedestal{index}`)
+	local trim = pedestal and pedestal:FindFirstChild("Trim")
+	if trim and trim:IsA("BasePart") then
+		trim.Color = color
+	end
 end
 
 return Arena

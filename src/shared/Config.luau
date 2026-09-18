@@ -367,14 +367,16 @@ Config.Arena = {
 		TextColor = Color3.fromRGB(226, 236, 255),
 		TextSize = 38,
 		-- Cycled around the ring, one per segment.
+		-- Cycled round the ring, one per segment. `@records` turns that
+		-- hoarding into a live server-records board (Config.Board).
 		Texts = {
 			"SPEED CUBE OPEN",
 			"",
+			"@records",
+			"",
 			"FINALS",
 			"",
-			"SPEED CUBE OPEN",
-			"",
-			"ROUND 8",
+			"@records",
 			"",
 		},
 	},
@@ -469,6 +471,22 @@ Config.Arena = {
 		LightColor = Color3.fromRGB(150, 190, 255),
 		LightBrightness = 0.9,
 		LightRange = 14,
+
+		-- RARITY, VISIBLE ACROSS THE ROOM. The plinth ring and the pool of
+		-- light under each station take the colour of the tier that player
+		-- has equipped. It is the one rarity channel that costs no new
+		-- geometry and that everybody can see from their own seat -- without
+		-- it, the only way to tell an Epic cube from a Common one is to read
+		-- two words of grey text in the corner of your own HUD.
+		--
+		-- Common keeps the house blue on purpose: if every station glows
+		-- differently, none of them stands out.
+		TierTint = {
+			Common = Color3.fromRGB(34, 92, 145),
+			Rare = Color3.fromRGB(38, 126, 214),
+			Epic = Color3.fromRGB(138, 58, 214),
+			Legendary = Color3.fromRGB(226, 158, 42),
+		},
 	},
 }
 
@@ -587,30 +605,36 @@ Config.Products = {
 }
 
 --------------------------------------------------------------------------------
--- Board: the leaderboard pillar in the middle of the ring
+-- Board: the server records, on the hoardings round the floor
 --------------------------------------------------------------------------------
 --[[
-	Kept LOW on purpose: every camera looks across the ring centre at the
-	pedestals opposite. A camera sits about 7 studs up and a cube about
-	4.5, so a pillar under ~5 studs never hides anybody's cube.
+	This used to be a pillar in the MIDDLE of the ring, and that was wrong
+	twice over. Every camera looks across the centre, so the pillar stood
+	behind the cube from all eight seats: its text landed on top of the HUD
+	and its bulk hid the thing DESIGN.md calls a feature -- watching other
+	players' cubes turn across the ring. Now the middle is empty and you
+	can see straight across it.
+
+	The records live on the barrier hoardings instead, which is where a
+	real competition puts them. A hoarding marked `@records` in
+	Config.Arena.Barrier.Texts becomes one, and there are several round the
+	ring so one is always in shot.
+
+	A board is read from about fifty studs away, so it says ONE thing in
+	big type -- the server's best time -- with a small line under it. The
+	full table is a HUD job, not a scenery job; nobody squints at a wall.
 ]]
 Config.Board = {
-	Width = 9,
-	Height = 4.6,
-	Lines = 4, -- depth records shown (fastest per depth, deepest first)
-	SolverLines = 2, -- most solves this server
-	-- Quiet on purpose. Every camera looks ACROSS the middle of the ring, so
-	-- this board is directly behind the cube from all eight seats and its
-	-- text lands on top of the HUD. It is a thing you glance at between
-	-- solves, not a thing that should compete with the cube.
-	TextSize = 17,
-	TextColor = Color3.fromRGB(150, 162, 180),
-	Color = Color3.fromRGB(30, 32, 40),
-	-- NOT bright, and not gold any more. This is the top face of a
-	-- nine-stud-wide slab: from a camera looking down at 30 degrees you see
-	-- the whole square, so anything eye-catching here is a big blank
-	-- rectangle hanging in the middle of the hall saying nothing.
-	TrimColor = Color3.fromRGB(52, 58, 74),
+	Marker = "@records", -- a Barrier.Texts entry this exact string becomes a board
+	HeaderText = "SERVER RECORD",
+	HeaderSize = 15,
+	HeaderColor = Color3.fromRGB(120, 176, 226),
+	TimeSize = 46, -- the big number
+	TimeColor = Color3.fromRGB(238, 244, 255),
+	SubSize = 17,
+	SubColor = Color3.fromRGB(150, 162, 180),
+	PanelColor = Color3.fromRGB(12, 16, 24),
+	PanelTransparency = 0.25,
 }
 
 --------------------------------------------------------------------------------

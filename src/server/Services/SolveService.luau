@@ -37,6 +37,7 @@ local Cubes = require(Shared.Defs.Cubes)
 local Moves = require(Shared.Moves)
 local Remotes = require(Shared.Remotes)
 
+local Arena = require(script.Parent.Parent.Arena)
 local Leaderboard = require(script.Parent.Parent.Leaderboard)
 local SaveService = require(script.Parent.SaveService)
 
@@ -435,6 +436,11 @@ function SolveService.join(player: Player): boolean
 	states[player] = state
 	updateLeaderstats(state, data)
 	spectate(N.SpectateLook, index, data.equipped, state.pedestal)
+	-- Light their plinth in the tier of whatever they had on when they left
+	-- last time, so a station never sits in the house colour with a
+	-- Legendary standing on it.
+	local equipped = Cubes.get(data.equipped)
+	Arena.setStationTier(index, equipped and equipped.tier)
 	deal(state)
 	return true
 end
@@ -447,6 +453,9 @@ function SolveService.leave(player: Player)
 	taken[state.pedestalIndex] = nil
 	states[player] = nil
 	spectate(N.SpectateLeave, state.pedestalIndex)
+	-- Back to the house colour: an empty station must not keep advertising
+	-- the Legendary of whoever was sitting there.
+	Arena.setStationTier(state.pedestalIndex, nil)
 end
 
 function SolveService.pedestalFor(player: Player): CFrame?

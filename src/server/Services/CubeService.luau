@@ -28,6 +28,7 @@ local Boxes = require(Shared.Defs.Boxes)
 local Cubes = require(Shared.Defs.Cubes)
 local Remotes = require(Shared.Remotes)
 
+local Arena = require(script.Parent.Parent.Arena)
 local SaveService = require(script.Parent.SaveService)
 
 local CubeService = {}
@@ -75,6 +76,10 @@ local function broadcastLook(player: Player, cubeId: string)
 	local pedestal = h.pedestalOf(player)
 	if index and pedestal then
 		Remotes.get(N.SpectateLook):FireAllClients(index, cubeId, pedestal)
+		-- and light their plinth in the tier colour, so the rest of the hall
+		-- can see what they are holding without reading anything.
+		local def = Cubes.get(cubeId)
+		Arena.setStationTier(index, def and def.tier)
 	end
 end
 
