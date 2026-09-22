@@ -121,7 +121,7 @@ and for the store icon.
 | `Config.Look` | the lighting rig's numbers |
 | `Config.Arena` | the hall: radii, heights, colours, the hoarding texts |
 | `src/server/Look.luau` | applies the rig at boot |
-| `src/server/Arena.luau` | builds the hall around the ring (315 parts, 73 of them Neon, 16 lights) |
+| `src/server/Arena.luau` | builds the hall around the ring (461 parts, 97 of them Neon, 16 lights -- printed by tools/smoke-arena.luau) |
 | `default.project.json` | the same lighting again, for Studio's edit view, plus `Technology` — which a script may neither read nor write |
 
 `Arena` never touches a pedestal CFrame; it only positions things *from*
@@ -145,7 +145,8 @@ and glow may vary per cube. Its size, outline and pulse are the readable
 skeleton and never change, because a cube you unlock must never be
 harder to play than the one you started with.
 
-The centre board, the crowd, per-tier cube VFX (a light and a sparkle on
+The records board's CONTENT (what one number it should headline -- see
+the M2 row), per-tier cube VFX (a light and a sparkle on
 the Epics and the Legendary), and hall lighting that answers a combo and
 a pop. Then the store icon and thumbnails, shot in-engine with a free
 camera.

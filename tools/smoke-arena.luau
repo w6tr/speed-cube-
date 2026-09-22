@@ -31,6 +31,7 @@ local Server = ServerScriptService:WaitForChild("Server")
 local Arena = require(Server:WaitForChild("Arena"))
 local LobbyBuilder = require(Server:WaitForChild("LobbyBuilder"))
 local Look = require(Server:WaitForChild("Look"))
+local Leaderboard = require(Server:WaitForChild("Leaderboard"))
 
 local failures = 0
 
@@ -189,6 +190,54 @@ if lowest < math.huge then
 	-- No slack. The wall has to swallow the worst corner of the widest
 	-- screen, or somebody somewhere is looking at the night sky.
 	check(highest < Config.Arena.Wall.Height, "the wall covers even the ultrawide corner")
+end
+
+--------------------------------------------------------------------------------
+print("\n-- the records boards and the rarity tint --")
+
+-- The two runtime paths Stage 2 added. Neither was covered before, and
+-- the tint's reset wrote the wrong colour to the pool for a whole review
+-- cycle without anything noticing.
+Leaderboard.build(lobby)
+
+local B = Config.Arena.Barrier
+local wantBoards = 0
+for i = 1, B.Segments do
+	if B.Texts[(i - 1) % #B.Texts + 1] == Config.Board.Marker then
+		wantBoards += 1
+	end
+end
+local boards = 0
+for _, d in lobby:GetDescendants() do
+	if d:IsA("SurfaceGui") and d.Name == "Records" then
+		boards += 1
+	end
+end
+check(
+	boards == wantBoards and boards > 0,
+	`records boards: built {boards}, config asks for {wantBoards}`
+)
+
+local trim = lobby:FindFirstChild("Pedestal1")
+trim = trim and trim:FindFirstChild("Trim")
+local pool = lobby:FindFirstChild("Stations")
+pool = pool and pool:FindFirstChild("Station1")
+pool = pool and pool:FindFirstChild("Pool")
+if trim and pool then
+	local trimHouse, poolHouse = trim.Color, pool.Color
+	local want = Config.Arena.Station.TierTint.Legendary
+	Arena.setStationTier(1, "Legendary")
+	check(trim.Color == want and pool.Color == want, "a Legendary tints both the ring and the pool")
+	Arena.setStationTier(1, nil)
+	check(
+		trim.Color == trimHouse and pool.Color == poolHouse,
+		"a reset restores the BUILT colours (the pool and the ring are different blues)"
+	)
+	Arena.setStationTier(1, "Common")
+	check(trim.Color == trimHouse and pool.Color == poolHouse, "Common is the house colour")
+else
+	failures += 1
+	print("  FAIL  could not find Pedestal1.Trim or Station1.Pool to test the tint")
 end
 
 --------------------------------------------------------------------------------

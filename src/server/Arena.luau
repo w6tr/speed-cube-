@@ -30,8 +30,9 @@
 	first Sync arrives, when the camera is still Roblox's own and the
 	player can look wherever they like.
 
-	Arena owns no state and nothing here ever moves. Reactive lighting
-	(the hall answering a combo or a pop) is a later job.
+	Arena remembers only the parts the rarity tint recolours; nothing here
+	ever moves. Reactive lighting (the hall answering a combo or a pop) is
+	a later job.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -40,9 +41,11 @@ local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Co
 
 local Arena = {}
 
--- The Lobby folder, remembered at build so the station tints can find
--- their parts later without every caller having to carry it about.
-local lobby: Instance? = nil
+-- The parts the rarity tint recolours, per station, each with the colour
+-- it was BUILT in. Filled by buildStations, read by setStationTier: a
+-- reset restores exactly what was there, not one "house" value that is
+-- right for the ring and wrong for the pool.
+local tinted: { [number]: { { part: BasePart, house: Color3 } } } = {}
 
 --------------------------------------------------------------------------------
 -- Parts
@@ -255,10 +258,17 @@ local function buildBarrier(parent: Instance)
 				label.Size = UDim2.fromScale(0.94, height)
 				label.BackgroundTransparency = 1
 				label.Font = Enum.Font.GothamBlack
-				label.TextSize = size
+				-- Scaled with a cap, the same guard the plain hoardings use: a
+				-- board is about a hundred pixels of canvas wide, a long name plus
+				-- a solve count is several times that, and Roblox does not clip
+				-- overflowing text -- it hangs off the board into the air.
+				label.TextScaled = true
 				label.TextColor3 = color
 				label.Text = ""
 				label.Parent = panel
+				local cap = Instance.new("UITextSizeConstraint")
+				cap.MaxTextSize = size
+				cap.Parent = label
 				return label
 			end
 
@@ -279,8 +289,8 @@ local function buildBarrier(parent: Instance)
 			label.Position = UDim2.fromScale(0.04, 0.15)
 			label.BackgroundTransparency = 1
 			label.Font = Enum.Font.GothamBlack
-			-- Scaled, not fixed: a board is only 174 pixels of canvas wide and
-			-- "SPEED CUBE OPEN" at a fixed 38px is about twice that. Roblox
+			-- Scaled, not fixed: a board is only a hundred-odd pixels of canvas wide and
+			-- "SPEED CUBE OPEN" at a fixed 38px is far wider than that. Roblox
 			-- does not clip overflowing text, so it would hang off both ends
 			-- of the board and float in front of its neighbours.
 			label.TextScaled = true
@@ -623,7 +633,7 @@ local function buildStations(parent: Instance, pedestals: { CFrame }, floorTop: 
 		-- no shadow, so the pool is painted, not lit. It goes ABOVE every
 		-- floor marking (`floorTop`) -- underneath one it is swallowed by
 		-- the marking's filler disc and never drawn at all.
-		part(
+		local pool = part(
 			station,
 			"Pool",
 			Vector3.new(0.06, S.GlowRadius * 2, S.GlowRadius * 2),
@@ -637,6 +647,15 @@ local function buildStations(parent: Instance, pedestals: { CFrame }, floorTop: 
 				transparency = S.GlowTransparency,
 			}
 		)
+
+		-- Remember what the tier tint will recolour, with its built colour.
+		local pedestalModel = parent:FindFirstChild(`Pedestal{index}`)
+		local trim = pedestalModel and pedestalModel:FindFirstChild("Trim")
+		local tints: { { part: BasePart, house: Color3 } } = { { part = pool, house = pool.Color } }
+		if trim and trim:IsA("BasePart") then
+			table.insert(tints, { part = trim, house = trim.Color })
+		end
+		tinted[index] = tints
 
 		local fill = Instance.new("PointLight")
 		fill.Color = S.LightColor
@@ -660,7 +679,6 @@ function Arena.build(parent: Instance, pedestals: { CFrame })
 	buildWall(parent)
 	buildRig(parent, pedestals)
 	buildStations(parent, pedestals, floorTop)
-	lobby = parent
 end
 
 --------------------------------------------------------------------------------
@@ -668,36 +686,26 @@ end
 --------------------------------------------------------------------------------
 --[[
 	Colour station `index` for the tier of the cube that player has on.
-	`tier` of nil resets it to the house colour (nobody there).
+	`tier` of nil (nobody there) puts each part back to the colour it was
+	BUILT in -- the pool and the ring are different blues, so the house
+	colour is per part, never one value.
 
-	This runs on the SERVER so it replicates to everyone: the whole point
-	is that the other seven players can see you are holding a Legendary
-	from across the hall. Doing it client-side would miss your own station,
-	because Spectators skips your own pedestal.
+	Server-side because part colours set on the server replicate to every
+	client, including the ones who join later, which is exactly the sync
+	path a late joiner needs. (A client-side tint would also have missed
+	your own plinth, since Spectators skips your own pedestal -- but the
+	replication is the real reason.)
 
-	Cheap on purpose -- two part colours, no new instances, nothing to
-	clean up when a player leaves.
+	Cheap on purpose -- a couple of part colours, no instances.
 ]]
 function Arena.setStationTier(index: number, tier: string?)
-	local folder = lobby
-	if not folder then
-		return
+	local tints = tinted[index]
+	if not tints then
+		return -- no such station, or Arena never built (it runs inside a pcall)
 	end
-	local S = Config.Arena.Station
-	local color = (tier and S.TierTint[tier]) or Config.Lobby.Colors.Trim
-
-	local station = folder:FindFirstChild("Stations")
-	station = station and station:FindFirstChild(`Station{index}`)
-	local pool = station and station:FindFirstChild("Pool")
-	if pool and pool:IsA("BasePart") then
-		pool.Color = color
-	end
-
-	-- The plinth's own LED ring, which LobbyBuilder built.
-	local pedestal = folder:FindFirstChild(`Pedestal{index}`)
-	local trim = pedestal and pedestal:FindFirstChild("Trim")
-	if trim and trim:IsA("BasePart") then
-		trim.Color = color
+	local tint = if tier then Config.Arena.Station.TierTint[tier] else nil
+	for _, t in tints do
+		t.part.Color = tint or t.house
 	end
 end
 

@@ -325,7 +325,7 @@ Config.Look = {
 	then seen again in a free-camera shot for the store icon.
 
 	Radii, from the middle out:
-	   0     the leaderboard board (kept under 5 studs, see Config.Board)
+	   0     empty on purpose: every camera looks across it at the far side
 	  16     the ring of stations (Config.Lobby.Radius), and the truss
 	         above them
 	  23.5   every player's camera
@@ -366,7 +366,6 @@ Config.Arena = {
 		TrimHeight = 0.16,
 		TextColor = Color3.fromRGB(226, 236, 255),
 		TextSize = 38,
-		-- Cycled around the ring, one per segment.
 		-- Cycled round the ring, one per segment. `@records` turns that
 		-- hoarding into a live server-records board (Config.Board).
 		Texts = {
@@ -504,10 +503,10 @@ Config.Arena = {
 		-- it, the only way to tell an Epic cube from a Common one is to read
 		-- two words of grey text in the corner of your own HUD.
 		--
-		-- Common keeps the house blue on purpose: if every station glows
-		-- differently, none of them stands out.
+		-- Common has no entry ON PURPOSE. A tier with no colour here keeps
+		-- the colour the station was built in; if every station glowed
+		-- differently, none of them would stand out.
 		TierTint = {
-			Common = Color3.fromRGB(34, 92, 145),
 			Rare = Color3.fromRGB(38, 126, 214),
 			Epic = Color3.fromRGB(138, 58, 214),
 			Legendary = Color3.fromRGB(226, 158, 42),

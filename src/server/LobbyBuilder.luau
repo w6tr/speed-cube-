@@ -4,8 +4,8 @@
 
 	A round floor and a ring of pedestals facing OUTWARD. Every player
 	gets one pedestal; their camera sits outside the ring looking in, so
-	behind their own cube they see the rest of the ring, the leaderboard
-	pillar in the middle, and everybody else's cube across it. The cubes
+	behind their own cube they see the rest of the ring, the empty middle,
+	and everybody else's cube across it. The cubes
 	themselves are drawn by each client (its own live one, and a copy of
 	every other player's, driven by Spectate events).
 
