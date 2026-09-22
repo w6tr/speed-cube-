@@ -19,10 +19,6 @@
 	Nothing here is saved: a server's records live as long as the server.
 ]]
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
-
 local Leaderboard = {}
 
 type Record = { name: string, seconds: number, depth: number }
