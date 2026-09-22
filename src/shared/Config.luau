@@ -366,16 +366,17 @@ Config.Arena = {
 		TrimHeight = 0.16,
 		TextColor = Color3.fromRGB(226, 236, 255),
 		TextSize = 38,
-		-- Cycled round the ring, one per segment. `@records` turns that
-		-- hoarding into a live server-records board (Config.Board).
+		-- Cycled round the ring, one per segment. An entry equal to
+		-- Config.Board.Marker would become a records board; none is, on
+		-- purpose (see Config.Board).
 		Texts = {
 			"SPEED CUBE OPEN",
 			"",
-			"@records",
-			"",
 			"FINALS",
 			"",
-			"@records",
+			"SPEED CUBE OPEN",
+			"",
+			"ROUND 8",
 			"",
 		},
 	},
@@ -629,9 +630,22 @@ Config.Products = {
 }
 
 --------------------------------------------------------------------------------
--- Board: the server records, on the hoardings round the floor
+-- Board: the server records -- kept, and deliberately not shown (2026-09-22)
 --------------------------------------------------------------------------------
 --[[
+	PULLED BY THE CEO. Any single number on a wall was gameable: solve time
+	runs from first swipe to last, so a depth-3 solve always "beats" a
+	depth-15 one and whoever dials down owns the board. Not a security hole
+	(the server owns every time), a wrong incentive. Competition and
+	showing off come back with M3's sprints -- one scramble for the whole
+	lobby, first pop wins, a crown on the station -- which nobody can dial
+	their way onto. Leaderboard.luau still keeps the records per depth.
+
+	The panel styling below is dormant: put Marker into a Barrier.Texts
+	slot and that hoarding becomes a board again.
+
+	The rest of this comment is the design that was built:
+
 	This used to be a pillar in the MIDDLE of the ring, and that was wrong
 	twice over. Every camera looks across the centre, so the pillar stood
 	behind the cube from all eight seats: its text landed on top of the HUD

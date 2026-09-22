@@ -1,25 +1,22 @@
 --!strict
 --[[
-	Leaderboard.luau -- this server's records, shown on the hoardings.
+	Leaderboard.luau -- this server's records: kept correctly, shown nowhere.
 
-	It used to be a pillar in the MIDDLE of the ring. That was wrong twice
-	over: every camera looks across the centre, so the pillar stood behind
-	the cube from all eight seats -- its text printed over the HUD, and its
-	bulk hid the thing DESIGN.md calls a feature, watching other players'
-	cubes turn across the ring. The middle is empty now.
+	The CEO pulled the records board (2026-09-22). Every way of putting ONE
+	number on a wall was gameable: a solve's time runs from first swipe to
+	last, so a depth-3 solve is three swipes and always "beats" a depth-15
+	one, and whoever dials down owns the board. Not a security hole -- the
+	server owns every time and `plausible` gates recordSolve -- but a wrong
+	incentive, which is worse in a game that wants you to go deeper.
 
-	The records live on the barrier hoardings instead, where a real
-	competition puts them. Arena.luau builds the panels (any hoarding whose
-	text is `Config.Board.Marker`); this file only writes numbers into
-	them. Several sit round the ring, so one is always in shot.
+	The records are still kept, per depth, because they are cheap and the
+	next competition feature (M3 sprints: one scramble for the whole lobby,
+	first pop wins, a crown on the station) will want them. A hoarding in
+	Config.Arena.Barrier.Texts carrying Config.Board.Marker becomes a board
+	and gets the deepest depth's best written into it; none does today, and
+	that is deliberate, so build() finding nothing is not a warning.
 
-	A hoarding is read from about fifty studs, so a board says ONE thing
-	big -- the fastest solve on this server -- with a quiet line under it.
-	The full table belongs in the HUD, where a player can actually read it.
-
-	Server-side text on a SurfaceGui replicates on its own; the client does
-	nothing. Nothing here is saved: a server's records live as long as the
-	server. The global weekly board is M3.
+	Nothing here is saved: a server's records live as long as the server.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -30,38 +27,29 @@ local Leaderboard = {}
 
 type Record = { name: string, seconds: number, depth: number }
 
-local best: Record? = nil
+local bests: { [number]: Record } = {} -- by depth
 local solves: { [string]: number } = {}
 local boards: { { time: TextLabel, sub: TextLabel } } = {}
 
-local function topSolver(): (string?, number)
-	local who: string? = nil
-	local most = 0
-	for name, count in solves do
-		if count > most then
-			who, most = name, count
+-- The deepest depth anyone has solved on this server, and its best time:
+-- the one number that does not reward dialling down. Still not shown.
+local function headline(): Record?
+	local pick: Record? = nil
+	for _, record in bests do
+		if not pick or record.depth > pick.depth then
+			pick = record
 		end
 	end
-	return who, most
+	return pick
 end
 
 local function render()
-	local time, sub
-	if best then
-		time = string.format("%.2fs", best.seconds)
-		sub = `depth {best.depth}  ·  {best.name}`
-	else
-		time = "--"
-		sub = "no solves yet"
+	if #boards == 0 then
+		return
 	end
-
-	-- A server where somebody has stacked up forty solves should say so,
-	-- but the record is still the headline.
-	local who, count = topSolver()
-	if who and count > 1 then
-		sub = `{sub}   ·   {count} by {who}`
-	end
-
+	local best = headline()
+	local time = if best then string.format("%.2fs", best.seconds) else "--"
+	local sub = if best then `depth {best.depth}  ·  {best.name}` else "no solves yet"
 	for _, board in boards do
 		board.time.Text = time
 		board.sub.Text = sub
@@ -69,8 +57,8 @@ local function render()
 end
 
 --[[
-	`parent` is the Lobby folder. Arena has already built the panels, so
-	this only has to find them.
+	`parent` is the Lobby folder. Arena builds any panels; this only finds
+	them, and finding none is the current, intended state.
 ]]
 function Leaderboard.build(parent: Instance)
 	table.clear(boards)
@@ -84,21 +72,31 @@ function Leaderboard.build(parent: Instance)
 			end
 		end
 	end
-	if #boards == 0 then
-		warn(
-			`[Leaderboard] no records boards found -- is "{Config.Board.Marker}" still in `
-				.. "Config.Arena.Barrier.Texts, and does Arena build before this?"
-		)
-	end
 	render()
 end
 
 function Leaderboard.recordSolve(name: string, depth: number, seconds: number)
-	if not best or seconds < best.seconds then
-		best = { name = name, seconds = seconds, depth = depth }
+	local current = bests[depth]
+	if not current or seconds < current.seconds then
+		bests[depth] = { name = name, seconds = seconds, depth = depth }
 	end
 	solves[name] = (solves[name] or 0) + 1
 	render()
+end
+
+--[[
+	For whatever shows records next (a sprint crown, a HUD table): the
+	best per depth, deepest first, and the solve counts.
+]]
+function Leaderboard.snapshot(): ({ Record }, { [string]: number })
+	local list: { Record } = {}
+	for _, record in bests do
+		table.insert(list, record)
+	end
+	table.sort(list, function(a, b)
+		return a.depth > b.depth
+	end)
+	return list, table.clone(solves)
 end
 
 return Leaderboard

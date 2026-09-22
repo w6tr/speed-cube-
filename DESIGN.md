@@ -68,7 +68,7 @@ streak are the whole game.
 | | What | State |
 |---|---|---|
 | M1 | Pedestal ring, prompted solves, swipe + keys, combo, PERFECT, pop, coins, depth dial, leaderstats, saving. Feel pass: arrow lane, combo streak, solve card, first-play nudge, one-press chained swipes. | **playing in Studio** (2026-09-17) |
-| M2 | **Cube boxes** (the gacha): cubes with a look, a turning sound and a small coin multiplier; rarity tiers; the hatch animation; a collection screen with one equipped cube. Live cubes for spectators. A lobby leaderboard board (server bests per depth). Robux plumbing (coin packs, box bundles) with blank product ids until tuned. | next |
+| M2 | **Cube boxes** (the gacha): cubes with a look, a turning sound and a small coin multiplier; rarity tiers; the hatch animation; a collection screen with one equipped cube. Live cubes for spectators. A lobby records board -- built on the hoardings, then PULLED (2026-09-22): every one-number version was gameable by dialling to depth 3. Records are still kept per depth; the competition display waits for M3 sprints. Robux plumbing (coin packs, box bundles) with blank product ids until tuned. | next |
 | M3 | Server sprints (same scramble for the lobby, first pop wins, a crown), global weekly leaderboard (OrderedDataStore), daily streak + daily quests paying boxes, **rebirth** (reset coins and depth for a permanent multiplier), arrow fade at high depth | design |
 | M4 | Gamepasses (2x coins, VIP cube), seasonal boxes with limited cubes, trading, golden / rainbow variants, **per-cube arrow skins** | design |
 
@@ -135,6 +135,18 @@ rather than hand-copying them when the config changes.
 
 ### Still to do
 
+**The records board is out** (CEO, 2026-09-22). It was built on the
+hoardings, and every way of headlining one number was gameable: solve
+time runs from first swipe to last, so depth 3 always "beats" depth 15
+and whoever dials down owns the wall. Not a security problem -- the
+server owns every time -- a wrong incentive, and a game about going
+deeper cannot have its wall reward going shallow. The records are still
+kept per depth (`Leaderboard.snapshot`). Competition and showing off
+come back through the M3 sprint: one scramble for the whole lobby, first
+pop wins, a crown on the winner's station that everyone can see -- which
+nobody can dial their way onto. The station-tint machinery built here is
+exactly what a crown will use.
+
 **Per-cube arrow skins are M4** (CEO, 2026-09-17). The arrow is a
 cosmetic you stare at every second of play, so it is the highest
 perceived value per unit of work in the gacha, and it doubles as the
@@ -145,8 +157,7 @@ and glow may vary per cube. Its size, outline and pulse are the readable
 skeleton and never change, because a cube you unlock must never be
 harder to play than the one you started with.
 
-The records board's CONTENT (what one number it should headline -- see
-the M2 row), per-tier cube VFX (a light and a sparkle on
+Per-tier cube VFX (a light and a sparkle on
 the Epics and the Legendary), and hall lighting that answers a combo and
 a pop. Then the store icon and thumbnails, shot in-engine with a free
 camera.

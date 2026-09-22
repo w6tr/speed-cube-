@@ -214,8 +214,8 @@ for _, d in lobby:GetDescendants() do
 	end
 end
 check(
-	boards == wantBoards and boards > 0,
-	`records boards: built {boards}, config asks for {wantBoards}`
+	boards == wantBoards,
+	`records boards: built {boards}, config asks for {wantBoards} -- none today, on purpose`
 )
 
 local trim = lobby:FindFirstChild("Pedestal1")
