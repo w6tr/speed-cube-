@@ -46,7 +46,7 @@ export type Api = {
 	resetClock: () -> (),
 	addCoins: (n: number) -> (),
 	setCoins: (n: number) -> (),
-	setSprint: (phase: string, seconds: number) -> (),
+	setSprint: (phase: string, seconds: number, inRace: boolean?) -> (),
 }
 
 local ARROWS: { [string]: string } = { Up = "▲", Down = "▼", Left = "◀", Right = "▶" }
@@ -189,6 +189,7 @@ function Hud.build(parent: Instance, callbacks: Callbacks): Api
 	sprintLabel.Visible = false
 	local sprintPhase = "off"
 	local sprintEndsAt = 0
+	local sprintInRace = false
 
 	local function drawSprint()
 		local left = math.max(0, sprintEndsAt - os.clock())
@@ -201,16 +202,20 @@ function Hud.build(parent: Instance, callbacks: Callbacks): Api
 			sprintLabel.TextColor3 = C.Perfect
 			sprintLabel.TextSize = 22
 		elseif sprintPhase == "racing" then
-			sprintLabel.Text = `FIRST POP WINS   {math.ceil(left)}s`
-			sprintLabel.TextColor3 = C.Good
-			sprintLabel.TextSize = 18
+			-- A mid-race joiner is watching, not racing: their cube cannot win.
+			sprintLabel.Text = if sprintInRace
+				then `FIRST POP WINS   {math.ceil(left)}s`
+				else "SPRINT ON -- you're in the next one"
+			sprintLabel.TextColor3 = if sprintInRace then C.Good else C.InkSoft
+			sprintLabel.TextSize = if sprintInRace then 18 else 15
 		end
 		sprintLabel.Visible = sprintPhase ~= "off"
 	end
 
-	local function setSprint(phase: string, seconds: number)
+	local function setSprint(phase: string, seconds: number, inRace: boolean?)
 		sprintPhase = phase
 		sprintEndsAt = os.clock() + seconds
+		sprintInRace = inRace == true
 		drawSprint()
 	end
 

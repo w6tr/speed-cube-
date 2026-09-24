@@ -101,11 +101,13 @@ do
 		Sprint.pop(s, cfg, 171, "A", 7, 0.5, 8) == "too-fast",
 		"faster than MinHumanPerMove x depth cannot win"
 	)
-	local v2, previous = Sprint.pop(s, cfg, 172, "A", 7, 6.12, 8)
+	local v2, previous, sinceGo = Sprint.pop(s, cfg, 172, "A", 7, 6.12, 8)
 	check(
 		v2 == "won" and previous == nil,
 		"B swiped, A pops at a human pace: A wins, no previous crown"
 	)
+	check(sinceGo == 7, "the announced time is seconds since GO (165 -> 172), not the solve's own")
+	check(Sprint.live(s, "A", 7) == false, "after the win nobody is live: the dial unlocks")
 	check(s.crown == "A" and s.winner == "A", "A holds the crown")
 	check(
 		s.phase == "idle" and Sprint.remaining(s, 172) == 150,
@@ -179,9 +181,19 @@ do
 	Sprint.swipe(s, "B", 3)
 	Sprint.leave(s, "B")
 	check(
-		Sprint.pop(s, cfg, 170, "A", 7, 6, 8) == "no-race",
-		"the only other racer left: their swipe left with them"
+		Sprint.pop(s, cfg, 170, "A", 7, 6, 8) == "won",
+		"the other racer quit after swiping: the race was real, A still wins"
 	)
+end
+
+print("\n-- live --")
+do
+	local s = toRacing(2)
+	check(Sprint.live(s, "A", 7) == true, "A's sprint deal is live during the race")
+	check(Sprint.live(s, "A", 6) == false, "an older deal of A's is not")
+	check(Sprint.live(s, "Z", 7) == false, "someone never dealt is not")
+	Sprint.tick(s, cfg, 211, 2) -- the cap
+	check(Sprint.live(s, "A", 7) == false, "after the cap nothing is live")
 end
 
 if failures == 0 then

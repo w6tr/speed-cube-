@@ -69,7 +69,11 @@ export type SprintHooks = {
 	swipe: (player: Player, dealId: number) -> (),
 	finish: (player: Player, dealId: number, seconds: number, depth: number) -> (),
 	leave: (player: Player, pedestalIndex: number) -> (),
-	state: () -> Remotes.SprintState,
+	-- Is this player's deal the LIVE sprint cube? Not the same as the
+	-- deal's `sprint` flag, which stays true on a leftover cube after the
+	-- race has resolved.
+	live: (player: Player, dealId: number) -> boolean,
+	state: (player: Player) -> Remotes.SprintState,
 }
 
 type State = {
@@ -211,7 +215,9 @@ function SolveService.sync(player: Player)
 		cubes = data.cubes,
 		equipped = data.equipped,
 		others = othersFor(player),
-		sprint = if sprint then sprint.state() else { phase = "off", seconds = 0 },
+		sprint = if sprint
+			then sprint.state(player)
+			else { phase = "off", seconds = 0, inRace = false },
 	}
 	Remotes.get(N.Sync):FireClient(player, payload)
 end
@@ -224,10 +230,10 @@ end
 	A fresh cube at the dial depth -- or, with `preset`, the sprint's
 	shared cube, which ignores the dial and locks it.
 ]]
-local function deal(state: State, preset: Preset?)
+local function deal(state: State, preset: Preset?): number?
 	local data = SaveService.get(state.player)
 	if not data then
-		return
+		return nil
 	end
 	local depth = if preset then preset.depth else dialDepth(data)
 	local solution, scramble
@@ -252,21 +258,25 @@ local function deal(state: State, preset: Preset?)
 	state.popping = false
 	SolveService.sync(state.player)
 	spectate(N.SpectateDeal, state.pedestalIndex, state.dealCounter, scramble)
+	return state.dealCounter
 end
 
 --[[
 	GO: one scramble, dealt to every seated player at once, replacing
 	whatever they were on (the countdown was their warning). Returns each
 	player's new deal id, which is how SprintService tells a sprint pop
-	from any other.
+	from any other. Every racer's deal shares the same solution and
+	scramble tables; nothing mutates them, and nothing may.
 ]]
 function SolveService.dealAll(depth: number): { [Player]: number }
 	local solution, scramble = Moves.generate(depth, rng)
 	local preset: Preset = { depth = depth, solution = solution, scramble = scramble }
 	local ids: { [Player]: number } = {}
 	for player, state in states do
-		deal(state, preset)
-		ids[player] = state.dealCounter
+		local id = deal(state, preset)
+		if id then
+			ids[player] = id
+		end
 	end
 	return ids
 end
@@ -431,11 +441,13 @@ local function onSetDepth(player: Player, delta: any)
 	if not state or not data or (delta ~= 1 and delta ~= -1) then
 		return
 	end
-	-- The dial is locked during a sprint deal: turning it would redeal a
-	-- normal cube over the shared one and silently drop them out of the
-	-- race (see the "nothing started yet" redeal below).
+	-- The dial is locked while their cube is the LIVE sprint cube: turning
+	-- it would redeal a normal cube over the shared one and silently drop
+	-- them out of the race (see the "nothing started yet" redeal below).
+	-- Once the race resolves a leftover sprint cube is a normal deal and
+	-- the dial works again.
 	local live = state.deal
-	if live and live.sprint and not state.popping then
+	if live and sprint and sprint.live(player, live.id) and not state.popping then
 		toast(player, "info", "The dial is locked during a sprint")
 		return
 	end

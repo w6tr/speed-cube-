@@ -163,7 +163,7 @@ racing for, not worth throwing the session at. Placeholder; tune on play.
 | players drop below two during the countdown | countdown cancels with a toast; nothing dealt |
 | a player joins 3 s before GO | they are dealt the sprint cube with everyone else, and their `Sync` carries the countdown so they know why |
 | a player joins during the race | normal deal; they spectate; next sprint |
-| a player leaves mid-race | nothing to do — they simply cannot pop |
+| a player leaves mid-race | their deal goes (a rejoiner gets a fresh seat and a normal cube); **their swipe stays** — the race they were in was real, and voiding it would let a loser who quits deny the winner |
 | only one player ever swipes the sprint cube | their pop pays as a normal solve; no win, no light (a win needs a race) |
 | a hatch is playing at GO | the deal lands under the hidden cube and the prompt appears when the box goes, as today; the hatch's ~2.5 s is time lost, like an inspection clock |
 | a 2 s lag spike at GO | the same: lost time. Bunched swipes after a spike hit the existing spam guard, as they would on any cube |
@@ -182,9 +182,11 @@ racing for, not worth throwing the session at. Placeholder; tune on play.
   (today `deal` generates internally; `Moves.generate` already returns
   both halves), a `finish` callback carrying the server time and the
   plausibility result, and the dial guard.
-- One new remote, server → client: `Sprint(phase, payload)` with phases
-  `countdown`, `go`, `won`, `nobody`, `cancel`; plus a `sprint` field in
-  `SyncState` for late joiners. Nothing client → server.
+- One new remote, server → client: `Sprint(phase, seconds, inRace)` with
+  phases `off`, `idle`, `countdown`, `racing`; the win, the cap and a
+  cancel arrive as toasts. Plus a `sprint` field in `SyncState` (phase,
+  seconds, and whether THIS player's cube is the sprint cube) for late
+  joiners. Nothing client → server.
 - `Arena.setStationCrown(index, on)` — a per-station flag that
   `setStationTier` respects, so an Equip re-tint cannot erase the crown;
   ~20 lines beside the tint, and the engine test round-trips it (crown

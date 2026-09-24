@@ -65,9 +65,12 @@ export type Other = {
 
 -- The sprint's phase and how long it has left, so a late joiner knows why
 -- there is a countdown on screen. Phases: off | idle | countdown | racing.
+-- `inRace` is whether THIS player's cube is the sprint cube: someone who
+-- joined mid-race is watching, not racing, and the HUD must say so.
 export type SprintState = {
 	phase: string,
 	seconds: number,
+	inRace: boolean,
 }
 
 export type SyncState = {

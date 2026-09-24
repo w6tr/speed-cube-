@@ -238,15 +238,18 @@ if trim and pool then
 
 	-- The sprint crown sits ABOVE the tint: an Equip mid-crown is remembered,
 	-- not painted, and the crown coming off repaints the remembered tier.
-	local gold = Config.Sprint.CrownColor
+	local crownColor = Config.Sprint.CrownColor
 	Arena.setStationTier(1, "Rare")
 	Arena.setStationCrown(1, true)
 	check(
-		trim.Color == gold and pool.Color == gold,
+		trim.Color == crownColor and pool.Color == crownColor,
 		"a crown lights both parts in the crown colour"
 	)
 	Arena.setStationTier(1, "Legendary")
-	check(trim.Color == gold and pool.Color == gold, "a tier change while crowned does not repaint")
+	check(
+		trim.Color == crownColor and pool.Color == crownColor,
+		"a tier change while crowned does not repaint"
+	)
 	Arena.setStationCrown(1, false)
 	local legendary = Config.Arena.Station.TierTint.Legendary
 	check(

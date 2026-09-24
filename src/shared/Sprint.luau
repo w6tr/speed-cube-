@@ -49,7 +49,7 @@ export type Event = {
 	crown: any?, -- nobody: the crown that was just cleared, if any
 }
 
-export type Verdict = "won" | "not-racing" | "wrong-deal" | "already-won" | "too-fast" | "no-race"
+export type Verdict = "won" | "not-racing" | "wrong-deal" | "too-fast" | "no-race"
 
 function Sprint.new(): State
 	return { phase = "off", at = 0, dealIds = {}, swiped = {}, winner = nil, crown = nil }
@@ -114,10 +114,19 @@ function Sprint.swipe(s: State, key: any, dealId: number)
 	end
 end
 
+-- Is this player's deal the live sprint cube? The dial lock and the HUD
+-- both ask this, and the answer changes the moment the race resolves.
+function Sprint.live(s: State, key: any, dealId: number): boolean
+	return s.phase == "racing" and s.dealIds[key] == dealId
+end
+
 --[[
-	A player finished a cube. Returns the verdict and, on a win, whoever
+	A player finished a cube. Returns the verdict; on a win, also whoever
 	held the crown before (so the caller can clear it before lighting the
-	new one -- or leave it alone when it is the same player).
+	new one -- or leave it alone when it is the same player) and the race
+	time: seconds since GO, which is the number the room watched. The
+	solve's own seconds run from the first swipe and can contradict the
+	pop order.
 ]]
 function Sprint.pop(
 	s: State,
@@ -127,18 +136,15 @@ function Sprint.pop(
 	dealId: number,
 	seconds: number,
 	depth: number
-): (Verdict, any?)
+): (Verdict, any?, number)
 	if s.phase ~= "racing" then
-		return "not-racing", nil
+		return "not-racing", nil, 0
 	end
 	if s.dealIds[key] ~= dealId then
-		return "wrong-deal", nil
-	end
-	if s.winner ~= nil then
-		return "already-won", nil
+		return "wrong-deal", nil, 0
 	end
 	if seconds < cfg.MinHumanPerMove * depth then
-		return "too-fast", nil
+		return "too-fast", nil, 0
 	end
 	local raced = false
 	for other, did in s.swiped do
@@ -148,20 +154,25 @@ function Sprint.pop(
 		end
 	end
 	if not raced then
-		return "no-race", nil
+		return "no-race", nil, 0
 	end
 
+	local sinceGo = now - (s.at - cfg.Seconds)
 	local previous = s.crown
 	s.winner = key
 	s.crown = key
 	enter(s, "idle", now, cfg.Every)
-	return "won", previous
+	return "won", previous, sinceGo
 end
 
--- A player left. True when they held the crown, which is now cleared.
+--[[
+	A player left. Their deal id goes (a rejoiner gets a fresh seat and a
+	normal cube); their SWIPE STAYS -- the race they were in was real, and
+	voiding it would let a loser who quits deny the winner. True when they
+	held the crown, which is now cleared.
+]]
 function Sprint.leave(s: State, key: any): boolean
 	s.dealIds[key] = nil
-	s.swiped[key] = nil
 	if s.crown == key then
 		s.crown = nil
 		return true

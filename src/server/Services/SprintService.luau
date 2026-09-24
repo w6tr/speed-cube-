@@ -31,8 +31,10 @@ local N = Remotes.Names
 local cfg: Sprint.Config = Config.Sprint
 local s = Sprint.new()
 
-local function broadcast(phase: string, seconds: number)
-	Remotes.get(N.Sprint):FireAllClients(phase, seconds)
+-- `inRace` is true only for the GO broadcast: everyone seated at that
+-- instant was dealt the cube. A later joiner gets theirs from Sync.
+local function broadcast(phase: string, seconds: number, inRace: boolean?)
+	Remotes.get(N.Sprint):FireAllClients(phase, seconds, inRace == true)
 end
 
 local function toastAll(kind: string, text: string)
@@ -50,7 +52,7 @@ local function act(event: Sprint.Event)
 	if event.kind == "go" then
 		local ids = SolveService.dealAll(cfg.Depth)
 		Sprint.dealt(s, ids)
-		broadcast("racing", event.seconds)
+		broadcast("racing", event.seconds, true)
 		toastAll("big", "GO!")
 	elseif event.kind == "countdown" then
 		broadcast("countdown", event.seconds)
@@ -58,8 +60,8 @@ local function act(event: Sprint.Event)
 	elseif event.kind == "cancel" then
 		toastAll("info", "Sprint cancelled -- not enough players")
 	elseif event.kind == "nobody" then
+		-- The "idle" that follows in the same tick does the broadcast.
 		crown(event.crown, false)
-		broadcast("idle", cfg.Every)
 		toastAll("info", "Nobody popped -- no winner this sprint")
 	else -- "idle" | "off"
 		broadcast(event.kind, event.seconds)
@@ -75,7 +77,8 @@ local function onSwipe(player: Player, dealId: number)
 end
 
 local function onFinish(player: Player, dealId: number, seconds: number, depth: number)
-	local verdict, previous = Sprint.pop(s, cfg, os.clock(), player, dealId, seconds, depth)
+	local verdict, previous, sinceGo =
+		Sprint.pop(s, cfg, os.clock(), player, dealId, seconds, depth)
 	if verdict ~= "won" then
 		return
 	end
@@ -84,10 +87,14 @@ local function onFinish(player: Player, dealId: number, seconds: number, depth: 
 	if previous and previous ~= player then
 		crown(previous, false)
 	end
-	SolveService.award(player, Config.Sprint.WinBonus) -- coins are the service's business, not the rules'
+	local bonus = Config.Sprint.WinBonus -- coins are the service's business, not the rules'
+	SolveService.award(player, bonus)
 	broadcast("idle", cfg.Every)
-	Remotes.get(N.Sprint):FireAllClients("won", 0, player.Name, seconds)
-	toastAll("big", string.format("%s wins the sprint -- %.2fs", player.Name, seconds))
+	-- The room hears the name and the time since GO -- the race it watched,
+	-- not the solve's own seconds, which can contradict the pop order. The
+	-- winner alone hears the money.
+	toastAll("big", string.format("%s wins the sprint -- %.1fs", player.Name, sinceGo))
+	Remotes.get(N.Toast):FireClient(player, "coins", `+{bonus} coins -- sprint win`)
 end
 
 local function onLeave(player: Player, index: number)
@@ -96,8 +103,16 @@ local function onLeave(player: Player, index: number)
 	end
 end
 
-local function stateFor(): Remotes.SprintState
-	return { phase = s.phase, seconds = Sprint.remaining(s, os.clock()) }
+local function liveFor(player: Player, dealId: number): boolean
+	return Sprint.live(s, player, dealId)
+end
+
+local function stateFor(player: Player): Remotes.SprintState
+	return {
+		phase = s.phase,
+		seconds = Sprint.remaining(s, os.clock()),
+		inRace = s.phase == "racing" and s.dealIds[player] ~= nil,
+	}
 end
 
 --------------------------------------------------------------------------------
@@ -107,6 +122,7 @@ function SprintService.start()
 		swipe = onSwipe,
 		finish = onFinish,
 		leave = onLeave,
+		live = liveFor,
 		state = stateFor,
 	})
 	task.spawn(function()
@@ -118,7 +134,19 @@ function SprintService.start()
 				end
 			end
 			for _, event in Sprint.tick(s, cfg, os.clock(), joined) do
-				act(event)
+				-- Guarded, because an error here would unwind this thread and
+				-- take every future sprint with it, silently, while every HUD
+				-- sat on "FIRST POP WINS 0s". The machine has already moved
+				-- on, so a failed GO resolves itself at the cap as "nobody".
+				-- (The inner function returns a string only so Luau's typed pcall
+				-- hands back a second value to catch the error in.)
+				local ok, err = pcall(function(): string
+					act(event)
+					return ""
+				end)
+				if not ok then
+					warn(`[SprintService] {event.kind} failed: {err}`)
+				end
 			end
 			task.wait(0.25)
 		end
