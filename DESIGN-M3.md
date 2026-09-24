@@ -1,9 +1,8 @@
 # Speed Cube — M3a: the sprint, and your times on your mat
 
-*PROPOSAL, 2026-09-24, revised the same day after a second-developer
-design review. Not yet approved. The six decisions the CEO has to make
-are at the end; everything else is the lead developer's recommended
-shape, built on the code that exists today.*
+*Proposed 2026-09-24, revised the same day after a second-developer
+design review, and **approved by the CEO the same day -- all six
+decisions as recommended.** This is now the design being built.*
 
 ## Why this and not a leaderboard
 

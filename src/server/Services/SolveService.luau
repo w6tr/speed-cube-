@@ -51,6 +51,25 @@ type Deal = {
 	lastMoveAt: number?, -- os.clock at the last correct swipe
 	perfects: number,
 	misses: number,
+	sprint: boolean, -- the shared sprint cube: the dial is locked, SprintService is told
+}
+
+-- A preset deal: the sprint hands every player the SAME cube.
+type Preset = {
+	depth: number,
+	solution: { string },
+	scramble: { string },
+}
+
+--[[
+	What SprintService wants to hear. Registered at start, so this file
+	never requires SprintService (which requires this file).
+]]
+export type SprintHooks = {
+	swipe: (player: Player, dealId: number) -> (),
+	finish: (player: Player, dealId: number, seconds: number, depth: number) -> (),
+	leave: (player: Player, pedestalIndex: number) -> (),
+	state: () -> Remotes.SprintState,
 }
 
 type State = {
@@ -73,6 +92,7 @@ local states: { [Player]: State } = {}
 local pedestals: { CFrame } = {}
 local taken: { [number]: Player? } = {}
 local rng = Random.new()
+local sprint: SprintHooks? = nil
 
 local N = Remotes.Names
 
@@ -109,6 +129,11 @@ local function updateLeaderstats(state: State, data: SaveService.PlayerData)
 	local depth = dialDepth(data)
 	local best = data.best[tostring(depth)]
 	state.leaderstats.best.Value = if best then `{formatSeconds(best)} @{depth}` else "-"
+	-- And on their own mat, for them: the same figure the HUD shows.
+	Arena.setStationBest(
+		state.pedestalIndex,
+		if best then `BEST {formatSeconds(best)}  ·  depth {depth}` else ""
+	)
 end
 
 --[[
@@ -186,6 +211,7 @@ function SolveService.sync(player: Player)
 		cubes = data.cubes,
 		equipped = data.equipped,
 		others = othersFor(player),
+		sprint = if sprint then sprint.state() else { phase = "off", seconds = 0 },
 	}
 	Remotes.get(N.Sync):FireClient(player, payload)
 end
@@ -194,13 +220,22 @@ end
 -- Dealing
 --------------------------------------------------------------------------------
 
-local function deal(state: State)
+--[[
+	A fresh cube at the dial depth -- or, with `preset`, the sprint's
+	shared cube, which ignores the dial and locks it.
+]]
+local function deal(state: State, preset: Preset?)
 	local data = SaveService.get(state.player)
 	if not data then
 		return
 	end
-	local depth = dialDepth(data)
-	local solution, scramble = Moves.generate(depth, rng)
+	local depth = if preset then preset.depth else dialDepth(data)
+	local solution, scramble
+	if preset then
+		solution, scramble = preset.solution, preset.scramble
+	else
+		solution, scramble = Moves.generate(depth, rng)
+	end
 	state.dealCounter += 1
 	state.deal = {
 		id = state.dealCounter,
@@ -212,10 +247,44 @@ local function deal(state: State)
 		lastMoveAt = nil,
 		perfects = 0,
 		misses = 0,
+		sprint = preset ~= nil,
 	}
 	state.popping = false
 	SolveService.sync(state.player)
 	spectate(N.SpectateDeal, state.pedestalIndex, state.dealCounter, scramble)
+end
+
+--[[
+	GO: one scramble, dealt to every seated player at once, replacing
+	whatever they were on (the countdown was their warning). Returns each
+	player's new deal id, which is how SprintService tells a sprint pop
+	from any other.
+]]
+function SolveService.dealAll(depth: number): { [Player]: number }
+	local solution, scramble = Moves.generate(depth, rng)
+	local preset: Preset = { depth = depth, solution = solution, scramble = scramble }
+	local ids: { [Player]: number } = {}
+	for player, state in states do
+		deal(state, preset)
+		ids[player] = state.dealCounter
+	end
+	return ids
+end
+
+-- Coins outside a solve (the sprint's win bonus). Flat: no multipliers.
+function SolveService.award(player: Player, coins: number)
+	local state = states[player]
+	local data = SaveService.get(player)
+	if not state or not data then
+		return
+	end
+	data.coins += coins
+	updateLeaderstats(state, data)
+	SolveService.sync(player)
+end
+
+function SolveService.setSprintHooks(hooks: SprintHooks)
+	sprint = hooks
 end
 
 local function finish(state: State, current: Deal)
@@ -269,6 +338,12 @@ local function finish(state: State, current: Deal)
 	}
 	Remotes.get(N.Solved):FireClient(player, result)
 	spectate(N.SpectatePop, state.pedestalIndex)
+
+	-- A sprint pop: SprintService decides whether it won. It gets the
+	-- server's own seconds; the sprint has its own, stricter, human floor.
+	if sprint and current.sprint then
+		sprint.finish(player, current.id, seconds, current.depth)
+	end
 
 	state.popping = true
 	task.delay(Config.Timing.PopSeconds, function()
@@ -334,6 +409,9 @@ local function onMove(player: Player, direction: any, dealId: any, seq: any)
 		end
 		reply(true, false, perfect)
 		spectate(N.SpectateMove, state.pedestalIndex, expected.name)
+		if sprint and current.sprint then
+			sprint.swipe(player, current.id) -- "a win needs a race": this is the proof
+		end
 		if current.step >= current.depth then
 			finish(state, current)
 		end
@@ -351,6 +429,14 @@ local function onSetDepth(player: Player, delta: any)
 	local state = states[player]
 	local data = SaveService.get(player)
 	if not state or not data or (delta ~= 1 and delta ~= -1) then
+		return
+	end
+	-- The dial is locked during a sprint deal: turning it would redeal a
+	-- normal cube over the shared one and silently drop them out of the
+	-- race (see the "nothing started yet" redeal below).
+	local live = state.deal
+	if live and live.sprint and not state.popping then
+		toast(player, "info", "The dial is locked during a sprint")
 		return
 	end
 	local ceiling = unlockedDepth(data.solves)
@@ -453,9 +539,14 @@ function SolveService.leave(player: Player)
 	taken[state.pedestalIndex] = nil
 	states[player] = nil
 	spectate(N.SpectateLeave, state.pedestalIndex)
-	-- Back to the house colour: an empty station must not keep advertising
-	-- the Legendary of whoever was sitting there.
+	-- The crown comes off FIRST (it sits above the tint and would otherwise
+	-- swallow the reset), then back to the house colour: an empty station
+	-- must not keep advertising the Legendary of whoever was sitting there.
+	if sprint then
+		sprint.leave(player, state.pedestalIndex)
+	end
 	Arena.setStationTier(state.pedestalIndex, nil)
+	Arena.setStationBest(state.pedestalIndex, "")
 end
 
 function SolveService.pedestalFor(player: Player): CFrame?

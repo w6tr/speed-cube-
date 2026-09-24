@@ -29,6 +29,7 @@ local NAMES: { [string]: string } = {
 	Solved = "Solved", -- (result: SolveResult)               the deal is done; pop
 	Hatched = "Hatched", -- (result: HatchResult)             a box opened
 	Toast = "Toast", -- (kind: string, text: string)
+	Sprint = "Sprint", -- (phase: string, seconds: number, ...)  the sprint changed phase (ALL clients)
 
 	-- server -> ALL clients: what is happening on other pedestals. Each
 	-- client ignores its own pedestal index.
@@ -62,6 +63,13 @@ export type Other = {
 	step: number,
 }
 
+-- The sprint's phase and how long it has left, so a late joiner knows why
+-- there is a countdown on screen. Phases: off | idle | countdown | racing.
+export type SprintState = {
+	phase: string,
+	seconds: number,
+}
+
 export type SyncState = {
 	coins: number,
 	solves: number,
@@ -75,6 +83,7 @@ export type SyncState = {
 	cubes: { [string]: number }, -- owned cube id -> copies
 	equipped: string, -- cube id
 	others: { Other },
+	sprint: SprintState,
 }
 
 export type MoveResult = {

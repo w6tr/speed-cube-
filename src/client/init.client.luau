@@ -302,6 +302,7 @@ Remotes.get(N.Sync).OnClientEvent:Connect(function(state: Remotes.SyncState)
 		CameraRig.lockTo(state.pedestal)
 	end
 	hud.set(state)
+	hud.setSprint(state.sprint.phase, state.sprint.seconds)
 	collection.set(state)
 	Spectators.set(state.pedestalIndex, state.others)
 	serverEquipped = state.equipped
@@ -430,6 +431,17 @@ end)
 
 Remotes.get(N.Toast).OnClientEvent:Connect(function(kind: string, text: string)
 	toasts.show(kind, text)
+end)
+
+--[[
+	The sprint changed phase. "won" carries the winner's name and time and
+	is announced by the server's toast; the lit station arrives on its own,
+	as a part colour. Everything else just moves the HUD line.
+]]
+Remotes.get(N.Sprint).OnClientEvent:Connect(function(phase: string, seconds: number)
+	if phase ~= "won" then
+		hud.setSprint(phase, seconds)
+	end
 end)
 
 --------------------------------------------------------------------------------

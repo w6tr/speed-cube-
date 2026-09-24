@@ -47,6 +47,16 @@ local Arena = {}
 -- right for the ring and wrong for the pool.
 local tinted: { [number]: { { part: BasePart, house: Color3 } } } = {}
 
+-- The sprint crown: a lit station, sitting ABOVE the tier tint. While a
+-- station is crowned a tier change is remembered but not painted, so an
+-- Equip cannot erase a win; taking the crown off repaints the remembered
+-- tier. Lifecycle is SprintService's; this only paints.
+local crowned: { [number]: boolean } = {}
+local lastTier: { [number]: string } = {}
+
+-- Each station's painted best-time line, by index.
+local bestLabels: { [number]: TextLabel } = {}
+
 --------------------------------------------------------------------------------
 -- Parts
 --------------------------------------------------------------------------------
@@ -607,6 +617,24 @@ local function buildStations(parent: Instance, pedestals: { CFrame }, floorTop: 
 		numberLabel.Text = string.format("%02d", index)
 		numberLabel.Parent = face
 
+		-- Your best at your dial depth, for you. SolveService writes it.
+		local bestLabel = Instance.new("TextLabel")
+		bestLabel.Name = "Best"
+		bestLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+		bestLabel.Size = UDim2.fromScale(0.9, 0.14)
+		bestLabel.Position = UDim2.fromScale(0.5, S.BestRow)
+		bestLabel.BackgroundTransparency = 1
+		bestLabel.Font = Enum.Font.GothamBold
+		bestLabel.TextScaled = true
+		bestLabel.TextColor3 = S.BestColor
+		bestLabel.TextTransparency = 0.2
+		bestLabel.Text = ""
+		bestLabel.Parent = face
+		local bestCap = Instance.new("UITextSizeConstraint")
+		bestCap.MaxTextSize = S.BestSize
+		bestCap.Parent = bestLabel
+		bestLabels[index] = bestLabel
+
 		-- The two timer pads, where a competitor's hands would rest.
 		for side = -1, 1, 2 do
 			local pad = Instance.new("Frame")
@@ -698,7 +726,7 @@ end
 
 	Cheap on purpose -- a couple of part colours, no instances.
 ]]
-function Arena.setStationTier(index: number, tier: string?)
+local function paintTier(index: number, tier: string?)
 	local tints = tinted[index]
 	if not tints then
 		return -- no such station, or Arena never built (it runs inside a pcall)
@@ -706,6 +734,47 @@ function Arena.setStationTier(index: number, tier: string?)
 	local tint = if tier then Config.Arena.Station.TierTint[tier] else nil
 	for _, t in tints do
 		t.part.Color = tint or t.house
+	end
+end
+
+function Arena.setStationTier(index: number, tier: string?)
+	if tier then
+		lastTier[index] = tier
+	else
+		lastTier[index] = nil
+	end
+	if crowned[index] then
+		return -- remembered; painted when the crown comes off
+	end
+	paintTier(index, tier)
+end
+
+--[[
+	Light station `index` as the sprint winner, or take the light off and
+	repaint whatever tier it was last told. The colour is deliberately not
+	one any tier uses (Config.Sprint.CrownColor).
+]]
+function Arena.setStationCrown(index: number, on: boolean)
+	local tints = tinted[index]
+	if not tints then
+		return
+	end
+	if on then
+		crowned[index] = true
+		for _, t in tints do
+			t.part.Color = Config.Sprint.CrownColor
+		end
+	else
+		crowned[index] = nil
+		paintTier(index, lastTier[index])
+	end
+end
+
+-- The best-time line on station `index`'s mat. "" clears it.
+function Arena.setStationBest(index: number, text: string)
+	local label = bestLabels[index]
+	if label then
+		label.Text = text
 	end
 end
 

@@ -13,6 +13,7 @@
 	  Look.luau / Arena.luau  the lighting rig and the hall it lights
 	  SolveService.luau     the deal / swipe / solve loop
 	  CubeService.luau      boxes, hatching, equipping, Robux
+	  SprintService.luau    the shared-cube race (rules in Shared/Sprint.luau)
 	  CubeView.luau         how the client draws and turns the cube
 ]]
 
@@ -31,6 +32,7 @@ local Look = require(script.Look)
 local CubeService = require(script.Services.CubeService)
 local SaveService = require(script.Services.SaveService)
 local SolveService = require(script.Services.SolveService)
+local SprintService = require(script.Services.SprintService)
 
 --------------------------------------------------------------------------------
 -- World and services
@@ -74,6 +76,7 @@ CubeService.init({
 SaveService.start()
 SolveService.start()
 CubeService.start()
+SprintService.start()
 
 --------------------------------------------------------------------------------
 -- The handshake

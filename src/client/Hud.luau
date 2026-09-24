@@ -46,6 +46,7 @@ export type Api = {
 	resetClock: () -> (),
 	addCoins: (n: number) -> (),
 	setCoins: (n: number) -> (),
+	setSprint: (phase: string, seconds: number) -> (),
 }
 
 local ARROWS: { [string]: string } = { Up = "▲", Down = "▼", Left = "◀", Right = "▶" }
@@ -175,6 +176,45 @@ function Hud.build(parent: Instance, callbacks: Callbacks): Api
 	bestLabel.BackgroundColor3 = C.Surface
 	bestLabel.BackgroundTransparency = 0.2
 	Theme.corner(bestLabel, 6)
+
+	-- The sprint line, under the combo box: "SPRINT IN 1:40" while idle, a
+	-- loud countdown, then the race clock. Hidden while fewer than two are
+	-- seated. It counts down locally from the last thing the server said.
+	local sprintLabel =
+		Theme.label(parent, "Sprint", "", UDim2.new(0, 220, 0, 26), UDim2.new(1, -236, 0, 66), 15, {
+			align = Enum.TextXAlignment.Right,
+			color = C.InkSoft,
+			font = Enum.Font.GothamBlack,
+		})
+	sprintLabel.Visible = false
+	local sprintPhase = "off"
+	local sprintEndsAt = 0
+
+	local function drawSprint()
+		local left = math.max(0, sprintEndsAt - os.clock())
+		if sprintPhase == "idle" then
+			sprintLabel.Text = string.format("SPRINT IN %d:%02d", left // 60, left % 60)
+			sprintLabel.TextColor3 = C.InkSoft
+			sprintLabel.TextSize = 15
+		elseif sprintPhase == "countdown" then
+			sprintLabel.Text = `SPRINT IN {math.ceil(left)}`
+			sprintLabel.TextColor3 = C.Perfect
+			sprintLabel.TextSize = 22
+		elseif sprintPhase == "racing" then
+			sprintLabel.Text = `FIRST POP WINS   {math.ceil(left)}s`
+			sprintLabel.TextColor3 = C.Good
+			sprintLabel.TextSize = 18
+		end
+		sprintLabel.Visible = sprintPhase ~= "off"
+	end
+
+	local function setSprint(phase: string, seconds: number)
+		sprintPhase = phase
+		sprintEndsAt = os.clock() + seconds
+		drawSprint()
+	end
+
+	RunService.Heartbeat:Connect(drawSprint)
 
 	----------------------------------------------------------------------------
 	-- Hint, nudge, dial, CUBES
@@ -431,6 +471,7 @@ function Hud.build(parent: Instance, callbacks: Callbacks): Api
 		resetClock = resetClock,
 		addCoins = addCoins,
 		setCoins = setCoins,
+		setSprint = setSprint,
 	}
 end
 

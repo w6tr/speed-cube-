@@ -488,6 +488,14 @@ Config.Arena = {
 		NumberRow = 0.8,
 		NumberColor = Color3.fromRGB(150, 210, 255),
 		NumberSize = 34,
+		-- Your best at your dial depth, painted on your own mat between the
+		-- pads and the number. Readable by you (your mat is eight studs from
+		-- your camera), a smudge to anyone else -- and that is fine: showing
+		-- off to the room is the lit station; this is what a real competition
+		-- station looks like.
+		BestRow = 0.55,
+		BestSize = 15,
+		BestColor = Color3.fromRGB(226, 236, 255),
 		GlowRadius = 3.0, -- the lit pool on the floor under the station
 		-- The mat's edge glow was flaring up onto the cube's bottom row from
 		-- below -- a second, separate cause of "the glow carries over".
@@ -673,6 +681,34 @@ Config.Board = {
 	SubColor = Color3.fromRGB(150, 162, 180),
 	PanelColor = Color3.fromRGB(12, 16, 24),
 	PanelTransparency = 0.25,
+}
+
+--------------------------------------------------------------------------------
+-- Sprint: the shared-cube race (DESIGN-M3.md)
+--------------------------------------------------------------------------------
+--[[
+	One scramble for the whole lobby, first pop wins, the winner's station
+	is lit until the next sprint resolves. Un-gameable by construction:
+	there is no setting a player controls that makes the sprint cube easier.
+	A win needs a race (someone else must have swiped), so an idle second
+	account cannot hand out wins. The rules live in Shared/Sprint.luau.
+]]
+Config.Sprint = {
+	Every = 150, -- seconds between sprints, while MinPlayers are seated
+	Countdown = 15,
+	Seconds = 45, -- the cap: no pop by then means no winner
+	Depth = 8, -- the same for everyone, whatever their dial says
+	MinPlayers = 2,
+	WinBonus = 40, -- coins, flat, AFTER the multipliers: the race pays everyone the same
+	-- A sprint pop faster than this per move cannot win. PERFECT is 0.35
+	-- and "fast" is 0.6, so no human is excluded; a paced script is.
+	MinHumanPerMove = 0.15,
+	-- NOT a tier colour. Legendary is gold, Epic purple, Rare blue, the
+	-- house is blue, the arrows magenta, the coins gold. White is the one
+	-- thing nothing else on the floor is -- the winner's station is the
+	-- brightest object in the hall. Green is the fallback; aesthetic-eye
+	-- decides from a capture.
+	CrownColor = Color3.fromRGB(245, 248, 255),
 }
 
 --------------------------------------------------------------------------------

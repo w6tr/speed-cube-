@@ -235,6 +235,41 @@ if trim and pool then
 	)
 	Arena.setStationTier(1, "Common")
 	check(trim.Color == trimHouse and pool.Color == poolHouse, "Common is the house colour")
+
+	-- The sprint crown sits ABOVE the tint: an Equip mid-crown is remembered,
+	-- not painted, and the crown coming off repaints the remembered tier.
+	local gold = Config.Sprint.CrownColor
+	Arena.setStationTier(1, "Rare")
+	Arena.setStationCrown(1, true)
+	check(
+		trim.Color == gold and pool.Color == gold,
+		"a crown lights both parts in the crown colour"
+	)
+	Arena.setStationTier(1, "Legendary")
+	check(trim.Color == gold and pool.Color == gold, "a tier change while crowned does not repaint")
+	Arena.setStationCrown(1, false)
+	local legendary = Config.Arena.Station.TierTint.Legendary
+	check(
+		trim.Color == legendary and pool.Color == legendary,
+		"the crown coming off repaints the tier set DURING the crown"
+	)
+	Arena.setStationTier(1, nil)
+	check(
+		trim.Color == trimHouse and pool.Color == poolHouse,
+		"and a reset after that is still the house colour"
+	)
+
+	local bestLabel = lobby:FindFirstChild("Stations")
+	bestLabel = bestLabel and bestLabel:FindFirstChild("Station1")
+	bestLabel = bestLabel and bestLabel:FindFirstChild("MatFace")
+	bestLabel = bestLabel and bestLabel:FindFirstChild("Paint")
+	bestLabel = bestLabel and bestLabel:FindFirstChild("Best")
+	Arena.setStationBest(1, "BEST 1.23s")
+	check(
+		bestLabel ~= nil and bestLabel.Text == "BEST 1.23s",
+		"the mat carries a best line the server can write"
+	)
+	Arena.setStationBest(1, "")
 else
 	failures += 1
 	print("  FAIL  could not find Pedestal1.Trim or Station1.Pool to test the tint")

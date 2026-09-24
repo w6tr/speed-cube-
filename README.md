@@ -117,6 +117,15 @@ Checks every cube definition (tier, six colours, multiplier inside its
 tier's range and under the cap), that each box's odds add to 100, and
 that 20,000 rolls per box land on the printed odds.
 
+```bash
+~/.rokit/bin/lune run tools/test-sprint.luau
+```
+
+Drives the real `Sprint.luau` -- the sprint's rules as a pure state
+machine -- with a fake clock and fake players through every edge case in
+`DESIGN-M3.md`: the countdown cancelling, "a win needs a race", the
+plausibility floor, the cap, a repeat winner, leaving with the crown.
+
 None of those can see the 3D placement, the UI or the remotes. For those
 there is a real-engine loop: `rojo build` a place, then
 `~/.rokit/bin/run-in-roblox --place <it> --script <a smoke script>` runs
@@ -143,6 +152,7 @@ boots the world itself.
 ~/.rokit/bin/rojo sourcemap default.project.json -o sourcemap.json
 ~/.rokit/bin/luau-lsp analyze --defs=globalTypes.d.luau --sourcemap=sourcemap.json src
 ~/.rokit/bin/lune run tools/test-moves.luau
+~/.rokit/bin/lune run tools/test-sprint.luau
 ```
 
 `globalTypes.d.luau` is the Roblox API definition file (git-ignored);
