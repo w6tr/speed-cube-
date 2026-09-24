@@ -20,61 +20,85 @@ question below.
 
 ## What exists today
 
-| piece | where | state | seen by eye | score |
+| piece | where | state | seen by eye | score (round, date) |
 |---|---|---|---|---|
-| The hall — floor markings, hoardings, stands, wall + LED band, truss + lamps | `Arena.luau`, `Config.Arena` | built | yes | — |
-| The lighting rig — night, atmosphere, bloom, grade, DOF | `Look.luau`, `Config.Look` | built, tuned twice | yes | — |
-| Stations — plinth, mat with painted number / pads / best line, light pool | `Arena.luau`, `LobbyBuilder.luau` | built | yes | — |
-| Rarity tint on the station (per tier) | `Arena.setStationTier` | built | yes (Epic purple confirmed) | — |
-| Sprint crown — the winner's station lit white | `Arena.setStationCrown` | built | **no** (needs two players) | — |
-| The crowd in the stands | `Arena.luau`, `Stands.Crowd` | built | **invisible from any seat** | — |
-| The cube — 26 parts, SurfaceGui stickers, rounded | `CubeBuilder.luau` | built | yes | — |
-| 12 cube looks — Common recolours, Rare stickerless, Epic glow, Legendary Prism | `Defs/Cubes.luau` | built | only Classic, Mint, Neon | — |
-| Arrow prompts — magenta glyphs, outlined, pulsing | `CubeView.luau`, `Config.Cube.Arrow` | built | yes | — |
-| The pop — swell + confetti burst | `CubeView.luau` | built | **no** (motion; never captured) | — |
-| The hatch — box drop, shake, reveal, burst | `Hatch.luau` | built | **no** | — |
-| HUD — coins, timer, combo, arrow lane, best line, sprint line, depth dial | `Hud.luau`, `Theme.luau` | built | yes | — |
-| CUBES screen — boxes + collection cards | `CollectionPanel.luau` | built | yes: **cards show "?" or a swatch, never the cube** | — |
-| Toasts — PERFECT, combo, info, big | `Toasts.luau` | built | partly | — |
+| The hall — floor markings, hoardings, stands, wall + LED band, truss + lamps | `Arena.luau`, `Config.Arena` | built | yes | **5** (r1, 2026-09-24) — a dark set, not a lit final |
+| The lighting rig — night, atmosphere, bloom, grade, DOF | `Look.luau`, `Config.Look` | built, tuned twice | yes | scored with the hall: **5** — no rim light, no pools, no haze |
+| Stations — plinth, mat with painted number / pads / best line, light pool | `Arena.luau`, `LobbyBuilder.luau` | built | yes | **5** (r1) — parts, not furniture; seven read as dark drums |
+| Rarity tint on the station (per tier) | `Arena.setStationTier` | built | yes (Epic purple confirmed) | scored with the stations: the system is right, the Epic trim is the arrows' magenta |
+| Sprint crown — the winner's station lit white | `Arena.setStationCrown` | built | yes (painted client-side for the capture) | scored with the stations: white reads as "that light is on", not "winner"; keep white, add a cone from above; green would be worse |
+| The crowd in the stands | `Arena.luau`, `Stands.Crowd` | built | **invisible from any seat** | not scorable; the hall critic wants the front rows lit with a crowd you can see |
+| The cube — 26 parts, SurfaceGui stickers, rounded | `CubeBuilder.luau` | built | yes | **6** (r1) — owns the frame; the arrows are the quietest thing on it |
+| 13 cube looks — 5 Common recolours, 4 Rare stickerless, 3 Epic glow, 1 Legendary Prism | `Defs/Cubes.luau` | built | **yes, all 13** (cycled on the live pedestal) | **5** (r1) — Rare reads as Common, Prism is a lightbulb, no material variety |
+| Arrow prompts — magenta glyphs, outlined, pulsing | `CubeView.luau`, `Config.Cube.Arrow` | built | yes | scored with the cube: **6** — a third of a sticker wide, off-centre, unlit |
+| The pop — swell + confetti burst + result card | `CubeView.luau`, `Toasts.luau` | built | yes (captured 0.5 s after a solve) | **5** (r1) — a receipt, not a reward; the card hides the cube |
+| The hatch — box drop, shake, reveal, burst | `Hatch.luau` | built | yes (26 frames, no purchase) | **4** (r1) — an unlit black crate for 1.25 s; the drop exposes the avatar; wrong game |
+| HUD — coins, timer, combo, arrow lane, best line, sprint line, depth dial | `Hud.luau`, `Theme.luau` | built | yes | **5** (r1) — no identity; the arrow lane is nearly invisible |
+| CUBES screen — boxes + collection cards | `CollectionPanel.luau` | built | yes: **cards show "?" or a swatch, never the cube** | **4** (r1) — the thing being sold is never shown |
+| Toasts — PERFECT, combo, info, big | `Toasts.luau` | built | the result card only | scored inside the HUD and the pop |
 | Store icon + thumbnails | — | **none** | — | — |
-| The avatar | default Roblox avatar behind the cube | untouched | yes: **an accessory pokes into frame** | — |
+| The avatar | default Roblox avatar behind the cube | untouched | yes: **its hair pokes into every frame**, and the hatch drop exposes the whole avatar | flagged by every critic; a full point on the cube |
 | Sound | Roblox built-ins | placeholder | — | — |
 
-"—" in the score column means the critic has not seen it yet. The first
-job of the art phase is to put every existing piece through the gate
-once, so the table shows where we actually stand.
+The baseline pass ran on 2026-09-24: every piece that could be captured
+went through the gate once. Every round is in `art/critic-log.md`, with
+the critic's ranked list per piece. Nothing scored above 6. The pattern
+across all eight reports: the *systems* are right (palette, tier
+colours, the underglow, one accent) and the *finish* is missing — light
+that only darkens, panels that are rectangles, products never shown,
+arrows quieter than the stickers.
 
 ## The building blocks to make
 
-In the order the reviews say they matter, most valuable first. Each is a
-piece the critic scores on its own.
+Revised after the baseline pass (2026-09-24), ordered by score moved per
+hour of work, most first. Each is a piece the critic scores on its own;
+the full ranked lists are in `art/critic-log.md`.
 
-1. **The cube skins as a system, with tier VFX.** Twelve looks exist and
-   nine have never been seen. The gacha's engine is *wanting the next
-   cube*, and that needs Epic and Legendary to look obviously more
-   expensive than Common — on the cube itself, not only on the plinth: a
-   light in the tier colour, a sparkle on Legendary, the Prism actually
-   prismatic. Deliverable: every look captured and scored; a `Look` +
-   VFX recipe a developer can add a thirteenth cube to in five lines.
-2. **The hatch.** The money moment, never seen. Pet Sim 99's egg opening
-   is the bar: the box fills the frame, the rarity colour is a *beam*,
-   the reveal has a beat. Deliverable: the animation, captured at its
-   three key frames, scored.
-3. **CUBES screen cards with live 3D previews.** A `ViewportFrame` per
-   card showing the actual spinning cube in its real colours with a
-   tier-coloured frame; locked ones shown darkened, so you can see what
-   you are missing. This is the single change most likely to sell boxes.
-4. **A HUD kit.** `Theme.luau` is the seed: panels, buttons, the coin
-   icon, tier frames, toast styles, a font pairing — one visual language,
-   applied everywhere, so a developer adding a screen gets the look for
-   free. The panels are "clean but generic" today.
-5. **The pop and the sprint's GO** as VFX. The pop has never been
-   captured; the sprint has no visual beyond the HUD line and a toast.
-   GO should hit the whole hall — the lamps, the LED band, a flash.
-6. **The crowd, or its removal.** Sixty-six parts nobody can see. Light
-   it, brighten it, or cut it.
-7. **The avatar.** Hide it, seat it, or replace it with something that
-   belongs — an accessory poking in behind the cube reads as a bug.
+0. **The avatar out of the frame.** Every one of the eight critics
+   flagged the hair behind the cube; it is a full point on the cube, the
+   hatch and the hall, and the cheapest point on the board. Hide it, or
+   seat it below the mat line. First, because it lifts four pieces at
+   once.
+1. **The cube skins as a system, with tier VFX** (looks 5, cube 6).
+   Arrows centred, two-thirds of a sticker wide, lit, with a dark halo;
+   the moving row marked; the Rares as glossy gradients and translucent
+   candy that deliver their names; the Prism a prism (bloom pulled back,
+   a hue per face or an iridescent finish); Void leaking violet from its
+   seams; the pale Commons saturated and Frost's body black; rim light
+   on every cube; the rule that an arrow colour never shares a hue with
+   a sticker. Deliverable: every look captured again and scored; a
+   `Look` + VFX recipe a developer can add a fourteenth cube to.
+2. **The hatch** (4). The box the brightest thing in the frame, in its
+   tier colour, lid on top and metallic, a glowing "?", a glow that grows
+   through the rattle; the hall dims and the play HUD goes; a real burst
+   with a flash and a ring across the floor. The critic wants the wooden
+   crate replaced by a competition cube case — a CEO call.
+3. **CUBES screen cards with live 3D previews** (4). A rendered cube on
+   every card, locked ones as dark silhouettes; the Pro box visibly
+   premium; a backdrop dim; tier as a fill, not a hairline; the edges
+   finished (EQUIPPED ribbon, padding, a real header).
+4. **The pop** (5). A chunky outlined "+21" with a coin, above the cube
+   instead of a card over it; a real burst with a flash; NEW BEST as a
+   stamp; the station flashes gold; nothing on screen that contradicts
+   the card.
+5. **A HUD kit** (5). The timer as an esports scorebug with a
+   state-coloured edge; the arrow lane on a pill in the arrows' magenta;
+   no debug strings ("(max 15)", "A or Left arrow"); a coin icon, the
+   cube name in its tier colour, a pressable CUBES with a badge; the
+   combo out from under Roblox's player list. One language every later
+   screen inherits.
+6. **The station as furniture** (5). Every station lit with a house ring
+   that carries across the hall; the pool a soft additive gradient; one
+   piece of furniture (margins, a rim and a foot, a thin bound mat, a
+   timer unit with a readout); numbers that read from every seat; the
+   mat black rubber; Epic trim violet so magenta stays the arrows'. The
+   crown keeps white and gains a cone of light from above.
+7. **The hall lit** (5). Lamps that cast pools, rim light on every
+   pedestal, haze; hoardings as lit coloured panels; the LED rail's
+   polygon corners smoothed. The critic also wants the frame rebalanced
+   (the opposite station directly behind the cube) and a hero piece on
+   the far side (a big screen, a crowd you can see) — CEO calls, and
+   the answer to "the crowd, or its removal".
 8. **Store icon + thumbnails.** A beauty-shot camera rig in-engine: the
    cube filling 60% of frame, three-quarter view, one giant arrow, a
    bright saturated background — nothing like the gameplay camera. The

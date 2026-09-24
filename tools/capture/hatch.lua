@@ -1,0 +1,1 @@
+local P=game:GetService("Players").LocalPlayer local H=require(P.PlayerScripts.Client.Hatch) local live=assert(workspace:FindFirstChild("LiveCube"),"no LiveCube") local root=live:GetPivot() task.wait(0.8) live.Parent=nil H.play(root,Color3.fromRGB(190,90,255),function() live.Parent=workspace end,function() print("HATCH DONE") end)
