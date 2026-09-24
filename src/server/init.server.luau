@@ -19,7 +19,6 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
@@ -109,35 +108,31 @@ end
 Remotes.get(Remotes.Names.RequestSync).OnServerEvent:Connect(answerSync)
 
 --------------------------------------------------------------------------------
--- Standing at the pedestal
+-- No avatars
 --------------------------------------------------------------------------------
 --[[
-	The avatar stands on the floor just behind its cube, facing outward
-	toward its own camera, so from the player's view their character is
-	looking at the cube with them. Walking and jumping are off (StarterPlayer
-	in default.project.json), so they stay put.
+	Nobody gets a character. The avatar used to stand on the floor behind
+	its cube, and from the locked camera its hair poked into every frame of
+	every session -- the critic's first pass (2026-09-24) charged a full
+	point for it on three separate pieces, and the hatch's falling box
+	exposed the whole default avatar sitting at the station. The seat is a
+	pedestal index, the camera is scripted and the cube is the player, so
+	nothing here needs a body.
 ]]
+Players.CharacterAutoLoads = false
 
-local function standAtPedestal(player: Player, character: Model)
-	local pedestal = SolveService.pedestalFor(player)
-	if not pedestal then
-		return
-	end
-	local root = character:WaitForChild("HumanoidRootPart", 10)
-	if not root then
-		return
-	end
-	local L = Config.Lobby
-	-- Pedestal top -> down to the floor, up to the hip, back toward the
-	-- ring centre, and turned to face +Z (an avatar faces its -Z).
-	local stand = pedestal
-		* CFrame.new(0, -L.PedestalHeight + L.HipHeight, -L.StandBack)
-		* CFrame.Angles(0, math.pi, 0)
-	-- Roblox may still be placing the character at the spawn this frame;
-	-- one heartbeat later our placement is the last word.
-	RunService.Heartbeat:Wait()
-	if character.Parent then
-		character:PivotTo(stand)
+-- Without a character a player has no replication focus, and a place with
+-- streaming on then sends them NOTHING: the first no-avatar play test was
+-- a cube floating in a blue void. The focus goes on their own pedestal,
+-- which is where every byte they need is anyway.
+local function focusOn(player: Player)
+	local index = SolveService.pedestalIndexFor(player)
+	local pedestal = if index then world.folder:FindFirstChild("Pedestal" .. index) else nil
+	local column = if pedestal then pedestal:FindFirstChild("Column") else nil
+	if column and column:IsA("BasePart") then
+		player.ReplicationFocus = column
+	else
+		warn("[Speed Cube] no pedestal to focus replication on for " .. player.Name)
 	end
 end
 
@@ -154,12 +149,7 @@ local function onPlayerAdded(player: Player)
 		player:Kick(`This ring is full ({Config.MaxPlayers} cubers). Try another server!`)
 		return
 	end
-	player.CharacterAdded:Connect(function(character)
-		standAtPedestal(player, character)
-	end)
-	if player.Character then
-		standAtPedestal(player, player.Character)
-	end
+	focusOn(player)
 	if askedEarly[player] then
 		askedEarly[player] = nil
 		answerSync(player)

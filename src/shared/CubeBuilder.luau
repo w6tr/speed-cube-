@@ -31,6 +31,7 @@ export type Cube = {
 	model: Model,
 	cubies: { Cubie },
 	pitch: number, -- centre-to-centre distance between neighbouring cubies
+	core: Part, -- invisible, at the cube's centre: the lamp inside a look lives here
 }
 
 -- Which sticker goes on which side of a cubie at grid position (x, y, z).
@@ -68,24 +69,171 @@ local function sticker(part: Part, normal: Enum.NormalId, face: string)
 	stroke.Parent = frame
 end
 
+local function shaded(color: Color3, amount: number): Color3
+	if amount > 1 then
+		return color:Lerp(Color3.new(1, 1, 1), math.min(1, amount - 1))
+	elseif amount < 1 then
+		return color:Lerp(Color3.new(0, 0, 0), math.min(1, 1 - amount))
+	end
+	return color
+end
+
+-- A look with `shade` is lit by height: the top row gets `top`, the bottom
+-- row `bottom`, the middle row halfway. It is what makes a glossy Rare
+-- read as one object with light on it rather than six flat colours.
+local function shadeAt(look: Cubes.Look, homeY: number, pitch: number): number
+	local shade = look.shade
+	if not shade then
+		return 1
+	end
+	local t = (homeY / pitch + 1) / 2
+	return shade.bottom + (shade.top - shade.bottom) * t
+end
+
+-- A glossy look paints a hard highlight into the top corner of every
+-- sticker: the crisp white spot light leaves on hard candy. The engine's
+-- own specular does not show from the locked camera; this does.
+local function sheen(fill: Frame, on: boolean)
+	local spot = fill:FindFirstChild("Sheen")
+	if not on then
+		if spot then
+			spot:Destroy()
+		end
+		return
+	end
+	if not spot then
+		local frame = Instance.new("Frame")
+		frame.Name = "Sheen"
+		frame.AnchorPoint = Vector2.new(0, 0)
+		frame.Position = UDim2.fromScale(0.1, 0.09)
+		frame.Size = UDim2.fromScale(0.34, 0.2)
+		frame.BackgroundColor3 = Color3.new(1, 1, 1)
+		frame.BackgroundTransparency = 0.22
+		frame.BorderSizePixel = 0
+		frame.ZIndex = 2
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0.5, 0)
+		corner.Parent = frame
+		local gradient = Instance.new("UIGradient")
+		gradient.Rotation = 0
+		gradient.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0),
+			NumberSequenceKeypoint.new(0.7, 0.35),
+			NumberSequenceKeypoint.new(1, 1),
+		})
+		gradient.Parent = frame
+		frame.Parent = fill
+	end
+end
+
+-- A gummy look darkens the edge of every sticker, the way light leaves
+-- the rim of a jelly sweet, so the translucency reads even from a
+-- camera that cannot see through the cube.
+local function rim(fill: Frame, color: Color3, on: boolean)
+	local edge = fill:FindFirstChild("Rim")
+	if not on then
+		if edge then
+			edge:Destroy()
+		end
+		return
+	end
+	local stroke = if edge and edge:IsA("UIStroke") then edge else Instance.new("UIStroke")
+	stroke.Name = "Rim"
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Color = color:Lerp(Color3.new(0, 0, 0), 0.5)
+	stroke.Thickness = 6
+	stroke.Transparency = 0.1
+	stroke.Parent = fill
+end
+
+-- A prismatic look sweeps the hue across the whole cube, corner to
+-- corner, so one frozen frame shows the spectrum and not three flat
+-- colours: the stickers step through the wheel by where they sit.
+local function spectral(look: Cubes.Look, color: Color3, home: CFrame, pitch: number): Color3
+	if not look.prismatic then
+		return color
+	end
+	local p = home.Position
+	local t = ((p.X + p.Y + p.Z) / pitch + 3) / 6
+	local h, s, v = color:ToHSV()
+	return Color3.fromHSV((h + t * 0.5) % 1, s, v)
+end
+
+-- A sparkling look throws slow white sparks off the cube's surface.
+local function sparkle(core: Part, on: boolean)
+	local emitter = core:FindFirstChildOfClass("ParticleEmitter")
+	if not on then
+		if emitter then
+			emitter:Destroy()
+		end
+		return
+	end
+	if emitter then
+		return
+	end
+	local e = Instance.new("ParticleEmitter")
+	e.Name = "Sparkle"
+	e.Rate = 28
+	e.Lifetime = NumberRange.new(0.9, 1.6)
+	e.Speed = NumberRange.new(0.6, 1.6)
+	e.SpreadAngle = Vector2.new(180, 180)
+	e.Shape = Enum.ParticleEmitterShape.Box
+	e.ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface
+	e.ShapeInOut = Enum.ParticleEmitterShapeInOut.Outward
+	e.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0),
+		NumberSequenceKeypoint.new(0.3, 0.34),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	e.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(0.3, 0),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	e.LightEmission = 1
+	e.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(255, 220, 255))
+	e.Parent = core
+end
+
 --[[
 	Restyle every cubie of a built cube to `look`.
+
+	Each sticker remembers its base brightness and colour as attributes,
+	so the view can brighten the row about to turn and walk a prismatic
+	cube's hues without asking this file again.
 ]]
 function CubeBuilder.applyLook(cube: Cube, look: Cubes.Look)
-	local inset = if look.stickerless then 0.015 else Config.Cube.StickerInset
+	local inset = look.stickerInset
+		or (if look.stickerless then 0.015 else Config.Cube.StickerInset)
 	local glowStickers = look.glow == "stickers" or look.glow == "all"
+	local glowBody = look.glow == "all" or look.glow == "body"
+	local material = look.bodyMaterial
+		or (if glowBody then Enum.Material.Neon else Enum.Material.SmoothPlastic)
+	local transparency = look.bodyTransparency or 0
+	local brightness = if glowStickers
+		then (look.glowBrightness or Config.Cube.GlowStickerBrightness)
+		else Config.Cube.StickerBrightness
 	for _, cubie in cube.cubies do
 		local part = cubie.part
 		part.Color = look.body
-		part.Material = if look.glow == "all"
-			then Enum.Material.Neon
-			else Enum.Material.SmoothPlastic
+		part.Material = material
+		part.Transparency = transparency
+		part.Reflectance = look.reflectance or 0
+		local shade = shadeAt(look, cubie.home.Y, cube.pitch)
 		for _, child in part:GetChildren() do
 			if child:IsA("SurfaceGui") then
 				local face = string.sub(child.Name, -1)
-				local color = look.stickers[face] or look.body
+				local color = spectral(
+					look,
+					shaded(look.stickers[face] or look.body, shade),
+					cubie.home,
+					cube.pitch
+				)
 				local fill = child:FindFirstChild("Fill") :: Frame
 				fill.BackgroundColor3 = color
+				-- A see-through body needs see-through faces, or the
+				-- transparency only ever shows in the gaps.
+				fill.BackgroundTransparency = if look.stickerless then transparency else 0
 				fill.Size = UDim2.fromScale(1 - inset * 2, 1 - inset * 2)
 				fill.Position = UDim2.fromScale(inset, inset)
 				local corner = fill:FindFirstChild("Corner") :: UICorner
@@ -93,12 +241,31 @@ function CubeBuilder.applyLook(cube: Cube, look: Cubes.Look)
 				local glow = fill:FindFirstChild("Glow") :: UIStroke
 				glow.Color = color
 				glow.Enabled = glowStickers
-				child.LightInfluence = if glowStickers then 0 else 0.6
-				child.Brightness = if glowStickers
-					then Config.Cube.GlowStickerBrightness
-					else Config.Cube.StickerBrightness
+				sheen(fill, look.gloss == true)
+				rim(fill, color, look.rim == true)
+				-- Matte stickers take less of the hall's key light than they
+				-- did: their top faces were washing out to white.
+				child.LightInfluence = if glowStickers then 0 else 0.45
+				child.Brightness = brightness
+				child:SetAttribute("BaseBrightness", brightness)
+				child:SetAttribute("BaseColor", color)
 			end
 		end
+	end
+
+	sparkle(cube.core, look.sparkle == true)
+
+	local light = look.light
+	local existing = cube.core:FindFirstChildOfClass("PointLight")
+	if light then
+		local lamp = existing or Instance.new("PointLight")
+		lamp.Shadows = false
+		lamp.Color = light.color
+		lamp.Brightness = light.brightness
+		lamp.Range = light.range
+		lamp.Parent = cube.core
+	elseif existing then
+		existing:Destroy()
 	end
 end
 
@@ -143,7 +310,21 @@ function CubeBuilder.build(parent: Instance, name: string, root: CFrame, look: C
 		end
 	end
 
-	local cube: Cube = { model = model, cubies = cubies, pitch = pitch }
+	-- The core spans the whole cube: a lamp inside sits at its centre, and
+	-- a sparkling look throws its sparks from its surface.
+	local core = Instance.new("Part")
+	core.Name = "Core"
+	core.Size = Vector3.one * (size * 3 + Config.Cube.Gap * 2)
+	core.Transparency = 1
+	core.Anchored = true
+	core.CanCollide = false
+	core.CanQuery = false
+	core.CanTouch = false
+	core.CastShadow = false
+	core.CFrame = root
+	core.Parent = model
+
+	local cube: Cube = { model = model, cubies = cubies, pitch = pitch, core = core }
 	local classic = Cubes.get(Cubes.Default)
 	CubeBuilder.applyLook(cube, look or (classic :: Cubes.Def).look)
 	model.Parent = parent

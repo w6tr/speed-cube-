@@ -116,3 +116,73 @@ each entry.
 4. +1 make the burst a burst: white flash at the pop, tier-coloured ring across the floor, particles born at the cube flying outward with size falloff, none over the HUD.
 5. +0.5 fit the direction: a hard competition cube case in the tier colour with a sealed tag (also the store icon's signature shape).
 **Next:** this IS block 2 — apply 1–5 as attempt 2 (item 2 shared with block 7, the avatar).
+
+## The cube and the arrow prompts — attempt 2 — 2026-09-24 — score 7 (was 6)
+
+**Changed since last round:** arrows centred, two-thirds of a sticker, brighter, black outline + dark halo; no characters at all (hair gone); the prompted row lit a notch up and the rest down; the mat widened with the pads in front and the best text behind (sliver gone); a rim light behind the cube. Not done: the orange, the BEST bar, the prompt/queue language.
+**Reason it is not higher:** the three magenta arrows still lose the brightness fight to the white-and-yellow top face a centimetre away, so the instruction is the second thing read on the cube, not the first.
+**Keep:** the cube (black plastic, rounded neon stickers, brightest object in the hall); arrows centred and outlined, magenta on cyan; the hair gone; the wider mat and the pads out front ("the most esports-final the station has looked"); the stage glow and rim light giving the cube depth.
+**Defects:** arrows more saturated but not lighter than the white/yellow stickers; on screen ~40–45% of a sticker, the outline a hairline, the halo invisible; the row marking reads as a colour change (cyan) not a spotlight; magenta means two things (the station glow is the same hue and many times the area — at 150px only the glow is left); the caption is a label not an instruction (white text, tiny grey arrow, two arrow languages); the queue above is three tiny grey glyphs; no air above the cube (the BEST bar sits on its head); a letter of the mat text peeks out right of the cube; no juice in a still.
+**Ranked list:**
+1. +0.5–1 the arrow wins the cube: base spanning the sticker's inner face, the arrow carrying the glow (magenta bloom), a white-hot core with a magenta edge, a thicker outline.
+2. +0.5 one arrow language: the caption becomes the same fat magenta glyph on a dark pill with the key hint small beside it; the queue legible or gone.
+3. +0.5 air above, nothing peeking: move the BEST bar off the cube; the mat text fully hidden or fully visible.
+4. +0.25–0.5 give magenta one meaning: shift the station glow to another hue.
+5. +0.25–0.5 mark the layer with light (an edge glow), not a hue shift; catch a pulse.
+**Next:** apply 1–5 — attempt 3.
+
+## The thirteen cube looks as a set — attempt 2 — 2026-09-24 — score 6 (was 5)
+
+**Changed since last round:** Frost black-bodied and saturated; Mint greener; Rares glass, shaded by height, Pastel a six-hue set, Ocean lighter on top, Sunset a gold–orange–pink gradient, Jelly 25% see-through; Void a glowing violet body with black stickers and a lamp; Plasma violet/cyan (no arrow magenta); Prism a pale glass body with spectral stickers at two-thirds Epic brightness, a lamp, and a hue walk; a rim light.
+**Reason it is not higher:** the Legendary now ranks visually below all three Epics and is a look-alike of Pastel, a Rare.
+**Keep:** Frost (the best Common now); Sunset delivering its name; Plasma fixed and distinct; Void's inversion (the only cube with a silhouette-level identity); Neon as the brightness reference; the Prism's stickers readable; the black-bodied Commons.
+**Defects:** Prism reads as a Rare (pale lavender, pastel stickers, two-thirds of an Epic is a Rare; siblings with Pastel); Pastel is a blank white block with no seams; Jelly not glossy or see-through from the play camera, its palette muddier than last round; no specular visible on any Rare from the locked camera; the rim light not visible at sheet scale; look-alike pairs Frost/Ocean and Ember/Sunset; Void reads electric blue in a blue hall, seams too wide, not "void"; Neon is Classic with a lamp; the Legendary has less juice than the Epics and no particles. Pet Sim 99's ladder is additive — every tier adds an effect, nothing subtracts.
+**Ranked list:**
+1. +1 Prism the brightest object in the hall and not a pastel: a real rainbow across the faces, 1.2× Epic glow, a halo, sparkle particles, a dark chrome/holographic body.
+2. +0.5 rebuild Pastel: six nameable candy hues with visible seams.
+3. +0.5 visible gloss on the Rares (a hard highlight painted into the sticker) and a vivid, visibly translucent Jelly.
+4. +0.25 Void from blue to violet, seams a third as wide, body near-black, soft halo.
+5. +0.25 break the look-alike pairs: Frost paler white-ice, Ocean owns deep blue; Ember flat brick, Sunset owns the gradient.
+**Next:** apply 1–5 — attempt 3.
+
+## The cube and the arrow prompts — attempt 3 — 2026-09-24 — score 7.5 (was 7)
+
+**Changed since last round:** white-hot cores with magenta edges and a dark outline, nearly the whole sticker; a glowing magenta frame round the moving row/column instead of a hue shift; the prompt as a dark pill with the glyph and a short key hint; the lane in magenta and larger; the BEST bar moved above the dial; the mat text shortened so it hides; the Epic tint shifted toward violet.
+**Reason it is not higher:** one finishing pass short — the magenta frame hangs off the bottom of the cube onto the mat, and the same arrow appears at three different weights on one screen (fat on the cube, thin in the queue, a small flat triangle on the pill).
+**Keep:** the three-ring glyph (white core, magenta edge, dark outline); the frame round the column (the change that moved the score); the stickers keeping their colours; the clean air above the cube; the Neon cube as an object; the dark pill under the cube.
+**Defects:** the frame overshoots the cube's base by a sticker-gap; three arrow weights; the queue above is ~15px specks with no backing; the glyph loses a ring on white (core vanishes) and on red (edge sinks) — the dark outline is thin; the right face blooms to white and competes with the arrow cores; magenta still on the floor (the shift to violet is not visible); the glyph is ~60% of the sticker, not nearly full.
+**Ranked list:**
+1. +0.5 fit the frame to the column (corners on the column's corners, nothing below the base) and thicken it into a lit bezel.
+2. +0.5 one glyph everywhere: the pill carries the cube's three-ring glyph at HUD scale, as tall as the timer; the queue adopts it on a small dark pill or goes.
+3. +0.25 fatten the dark outline so all three rings hold on white and red; grow the glyph toward 80%.
+4. +0.25 tame the sticker bloom to colour, not white; only the arrow cores are white-hot.
+5. +0.25 take magenta off the floor (station piece): the ring goes violet or cyan.
+**Next:** apply 1–5 — attempt 4, the last.
+
+## The thirteen cube looks as a set — attempt 3 — 2026-09-24 — score 7 (was 6)
+
+**Changed since last round:** Prism a dark chrome body with six saturated spectral faces at 1.2× Epic glow, a lamp, sparks, the hue walk; Pastel six candy hues on a grey body; a gloss band painted into every Rare sticker; Jelly vivid and 40% see-through; Void violet with thin seams; Frost paler white-ice.
+**Reason it is not higher:** Prism is now the brightest object on the sheet but is built exactly like Neon and Plasma (black body, flat glowing stickers, three colours showing), so it reads as a third Epic that happens to be yellow, not as the one Legendary.
+**Keep:** Prism's yellow (the only warm glow in a blue-and-magenta hall); Void (the most distinctive cube, the one most likely to be screenshotted); glow means Epic; the upgrade lines Ember→Sunset and Classic→Neon; Ocean's and Sunset's gradients; Pastel's visible seams; polish (no clipping, consistent corners, no white-out).
+**Defects:** Prism has no signature — each face one flat colour, chrome reads black in a dark hall, one sparkle invisible at 150px, no halo distinct from bloom; Pastel reads below Common (80–90% white, the gloss band whitens it further); Jelly not jelly (opaque in the still, olive top, Ocean's sibling); Frost and Slate a new look-alike pair vanishing into the blue hall (the magenta ring beats both); the Rare gloss is a fade, not a highlight, and bleaches Pastel's and Ocean's top faces; the key light washes the top face of every matte cube near-white; Prism's cyan face pale.
+**Ranked list:**
+1. +1 the rainbow ON Prism's faces (a spectral gradient so one frozen frame shows five or more hues) and one signature effect that survives 150px: many sparks or a ring of motes, and a halo on the mat no other station gets.
+2. +0.5 rebuild Pastel at candy saturation (bubblegum pink, sky, lemon nameable at 150px); drop or shrink the whitening gloss band.
+3. +0.25–0.5 make Jelly read as jelly without transparency: one dominant candy hue, body a darker shade of it, a brighter core, a darker rim, a large soft highlight.
+4. +0.25 separate Frost from Slate and keep both brighter than the ring under them.
+5. +0.25 turn the Rare gloss into a hard highlight (a crisp white shape in a corner), and dial back the top-face washout.
+**Next:** apply 1–5 — attempt 4, the last.
+
+## The hatch — attempt 2 — 2026-09-24 — score 6 (was 4)
+
+**Changed since last round:** the wooden crate replaced by a sealed competition cube case in the tier colour (coloured body, lit seam, dark metal lid on top, glowing "?" on every side, a "SPEED CUBE OPEN - SEALED" tag, a lamp inside growing through the rattle); no avatars; the hall dims and desaturates with a tier-coloured beam on the station, the HUD and player list hidden; a white flash, a floor ring, sparks from the cube, the lid flying off, the stage lights back under the flash.
+**Reason it is not higher:** the drop and the rattle still carry unfinished parts on the subject — the lid, the biggest face from the locked camera, is an unlit black slab, and the "spotlight" is a hard-edged translucent block whose vertical edges show in every frame.
+**Keep:** the Epic purple body; the "?" with its halo; the seam (the best graphic idea in the piece); the sealed tag; the stage taking over; the reveal's floor wash; the scale of the drop.
+**Defects:** the lid is an unlit black slab (40% of the silhouette); the beam is a box with hard vertical edges, not light; the rattle still has no juice (no sparks, motes or rays); the star particles are Roblox's stock sprite in a uniform field with no centre; the flash is a flat sheet with no source; the move arrows and lane bezel sit on the prize at the burst (a demo artefact: the real flow clears them, the capture did not); at 150px the lid merges with the hall; the timer pads read as two holes under the cube; the dim has not landed when the box enters.
+**Ranked list:**
+1. +1 the lid as the crown: bright gold or tier chrome, a lit rim round the top edge, the biggest "?" on the top face.
+2. +0.5–1 the beam as light: soft edges, brighter at the base, thinning with height, motes rising inside.
+3. +0.5 anticipation in the rattle: tier sparks leaking from the seam and circling, the seam widening into rays, the lid lifting a hair.
+4. +0.5 shape the burst: confetti chips in the six cube colours dense at the cube and thinning outward; a flash brightest at the seam.
+5. +0.5 the prize clean: no arrows or lane on the cube until the toast clears; the dim landed before the box enters; the pads take the floor glow.
+**Next:** apply 1–5 — attempt 3.

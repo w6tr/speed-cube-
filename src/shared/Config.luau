@@ -132,12 +132,23 @@ Config.Cube = {
 	-- Magenta appears nowhere on a cube, and the pulse now breathes over a
 	-- narrow range that never lets the arrow get faint.
 	--
+	-- The critic's first pass (2026-09-24) found the arrows the QUIETEST
+	-- thing on the cube: a third of a sticker wide, sitting in the corner
+	-- of it, unlit while the sticker under it glowed. So now each glyph is
+	-- centred in its sticker, sized as a fraction of it (Fill), drawn a
+	-- little brighter than a plain sticker (Brightness) over a soft dark
+	-- halo, and the row that has to turn is lit a notch above the rest
+	-- (SliceBoost / RestDim) so "this slice, this way" reads before the
+	-- colours do.
+	--
 	-- SKINNING: per-cube arrows are an M4 cosmetic (CEO, 2026-09-17 -- they
 	-- wait for the other cosmetics rather than shipping with M2's boxes).
-	-- When they land, only Color and Glow may ever vary per cube. Size,
-	-- Stroke and the pulse range are the READABLE SKELETON and stay fixed:
-	-- a cube you unlock must never be harder to play than the one you
-	-- started with, and the arrow is the whole reason the game is playable.
+	-- When they land, only Color and Glow may ever vary per cube. Fill,
+	-- Stroke, the halo, the pulse range and the slice lighting are the
+	-- READABLE SKELETON and stay fixed: a cube you unlock must never be
+	-- harder to play than the one you started with, and the arrow is the
+	-- whole reason the game is playable. And no cube's sticker may share
+	-- the arrow's hue (Defs/Cubes.luau keeps to that).
 	Arrow = {
 		Offset = 0.18, -- studs in front of the face
 		Color = Color3.fromRGB(255, 64, 180),
@@ -145,17 +156,46 @@ Config.Cube = {
 		WrongFlashSeconds = 0.25,
 		PulseSeconds = 0.75,
 		PulseTransparency = 0.12, -- never faint enough to lose
-		TextSize = 150,
+		-- Round 2 of the critic: the arrows still lost the brightness fight
+		-- to the white stickers. So the glyph is a white-hot CORE with the
+		-- magenta on its edge, nearly the whole sticker wide, on a slab
+		-- bright enough to bloom, and the row about to turn wears a glowing
+		-- magenta frame instead of a hue shift.
+		Core = Color3.fromRGB(255, 236, 250), -- the glyph's fill; Color is its edge
+		Fill = 1.0, -- the glyph's box as a fraction of its sticker (the ink is ~70% of the box)
+		Brightness = 2.4, -- the arrow slab's own light (a plain sticker is 1.0)
+		HaloScale = 1.35, -- the dark halo behind the glyph, relative to it
+		HaloTransparency = 0.15,
 		StrokeColor = Color3.fromRGB(10, 6, 14),
-		StrokeThickness = 5, -- holds the shape over any sticker colour
+		StrokeThickness = 8, -- the coloured edge
+		DarkThickness = 16, -- the dark outline outside it: the ring that never fails
+		SliceBoost = 1.08, -- the stickers of the row about to turn
+		RestDim = 0.72, -- every other sticker while a move is prompted
+		-- The lit bezel round the row: thick enough to survive a phone.
+		RowGlowThickness = 14, -- in pixels at 100 per stud
+		RowGlowTransparency = 0.1,
 	},
+	-- A cool lamp behind and above the player's own cube (pedestal space,
+	-- from the cube's centre), so its top edges catch a colour the hall's
+	-- lamps do not give them: the "rim light" the art direction asks for.
+	Rim = {
+		Offset = Vector3.new(0, 3.2, -3.0),
+		Color = Color3.fromRGB(120, 200, 255),
+		Brightness = 2.2,
+		Range = 10,
+		Angle = 75,
+	},
+	-- A prismatic look walks every sticker round the colour wheel this
+	-- many times a second, in steps this far apart.
+	PrismCycleHz = 0.05,
+	PrismStepSeconds = 0.08,
 	-- How bright the stickers are drawn. Above about 1.0 an ordinary white
 	-- or yellow sticker passes Config.Look.Bloom.Threshold under a station
 	-- lamp and the CUBE starts glowing, which is meant to be a cosmetic you
 	-- unlock, not something every cube does. Glow-tier cubes (Defs/Cubes
 	-- look.glow) get the high one on purpose -- that IS the cosmetic.
 	StickerBrightness = 1.0,
-	GlowStickerBrightness = 2.0,
+	GlowStickerBrightness = 1.7, -- glows in COLOUR; only the arrow cores may go white-hot
 	PopScale = 1.18, -- the cube swells to this on a solve
 	PopSeconds = 0.35,
 	ShakeStuds = 0.18, -- wrong-swipe wobble
@@ -179,8 +219,8 @@ Config.Camera = {
 Config.Hud = {
 	LaneSize = 3, -- the current arrow plus this many minus one upcoming
 	LaneHeight = 56,
-	LaneBigSize = 44, -- text size of the current arrow
-	LaneSmallSize = 26, -- and of the upcoming ones
+	LaneBigSize = 40, -- text size of the current arrow
+	LaneSmallSize = 28, -- and of the upcoming ones
 	ComboPunch = 1.25, -- the combo box scales to this on every hit
 	ComboStrokePer = 5, -- glow thickness = combo / this ...
 	ComboStrokeMax = 4, -- ... capped here
@@ -200,10 +240,8 @@ Config.Hud = {
 Config.Lobby = {
 	Radius = 16, -- pedestal ring radius
 	FloorSize = 90,
-	PedestalRadius = 1.6,
+	PedestalRadius = 2.7, -- wide enough that the mat (Arena.Station.MatSize) sits inside it
 	PedestalHeight = 2.6,
-	StandBack = 2.6, -- the avatar stands this far behind the cube (toward the ring centre)
-	HipHeight = 3.2, -- the avatar's root part above the floor when placed
 	-- The hall is dark and lit from above (Config.Look), so these are
 	-- much darker than they read here: a light pool falls on each of them.
 	Colors = {
@@ -469,9 +507,12 @@ Config.Arena = {
 	-- timer pads in front of the cube, and a pool of light on the floor.
 	Station = {
 		MatColor = Color3.fromRGB(26, 92, 72), -- competition mat green
-		-- Just inside the plinth trim ring (radius 1.75) so the station LED
-		-- still shows all the way round.
-		MatSize = 3.4,
+		-- Inside the plinth trim ring (Lobby.PedestalRadius + 0.15) so the
+		-- station LED still shows all the way round, and wide enough that
+		-- the cube (3.16 studs across) sits on it with a margin, the timer
+		-- pads in FRONT of it and the number and best line BEHIND it,
+		-- instead of everything painted under the cube's footprint.
+		MatSize = 5.2,
 		MatThickness = 0.08,
 		-- The timer pads and the station number are PAINTED on the mat, not
 		-- built out of parts. At full pop the cube swells down to within a
@@ -479,24 +520,25 @@ Config.Arena = {
 		-- be clipped straight through on every solve.
 		PadColor = Color3.fromRGB(16, 18, 24),
 		PadRingColor = Color3.fromRGB(38, 100, 150),
-		PadDiameter = 0.3, -- of the mat, across
+		PadDiameter = 0.16, -- of the mat, across
 		PadSpread = 0.19, -- each pad this far from the middle of the mat
 		-- Rows down the mat. 0 is the edge nearest the player, 1 the far
-		-- edge: the pads sit under the player's own camera, the number at the
-		-- far end where the rest of the hall reads it.
-		PadRow = 0.26,
-		NumberRow = 0.8,
+		-- edge. The cube covers rows 0.20-0.80; the pads sit in the near
+		-- band under the player's own camera, the number and the best line
+		-- in the far band where the rest of the hall reads them.
+		PadRow = 0.1,
+		NumberRow = 0.93,
 		NumberColor = Color3.fromRGB(150, 210, 255),
-		NumberSize = 34,
+		NumberSize = 40,
 		-- Your best at your dial depth, painted on your own mat between the
 		-- pads and the number. Readable by you (your mat is eight studs from
 		-- your camera), a smudge to anyone else -- and that is fine: showing
 		-- off to the room is the lit station; this is what a real competition
 		-- station looks like.
-		BestRow = 0.55,
-		BestSize = 15,
+		BestRow = 0.855,
+		BestSize = 14, -- short enough to hide behind the cube from the owner's seat
 		BestColor = Color3.fromRGB(226, 236, 255),
-		GlowRadius = 3.0, -- the lit pool on the floor under the station
+		GlowRadius = 3.8, -- the lit pool on the floor under the station
 		-- The mat's edge glow was flaring up onto the cube's bottom row from
 		-- below -- a second, separate cause of "the glow carries over".
 		GlowColor = Color3.fromRGB(70, 110, 175),
@@ -517,7 +559,7 @@ Config.Arena = {
 		-- differently, none of them would stand out.
 		TierTint = {
 			Rare = Color3.fromRGB(38, 126, 214),
-			Epic = Color3.fromRGB(138, 58, 214),
+			Epic = Color3.fromRGB(90, 80, 255), -- indigo, not magenta: magenta is the arrows'
 			Legendary = Color3.fromRGB(226, 158, 42),
 		},
 	},
@@ -609,16 +651,65 @@ Config.Boxes = {
 -- Hatch: the box-opening animation (client only)
 --------------------------------------------------------------------------------
 Config.Hatch = {
-	DropSeconds = 0.35, -- the box falls onto the pedestal
+	StageSeconds = 0.35, -- the hall dims and the beam lands BEFORE the case enters
+	DropSeconds = 0.35, -- the case falls onto the station
 	DropHeight = 6,
-	ShakeSeconds = 0.9, -- then rattles, harder and harder
+	ShakeSeconds = 1.1, -- then rattles, harder and harder, the seam lighting up
 	ShakeStuds = 0.25,
-	RevealSeconds = 0.4, -- the cube pops out and swells
+	RevealSeconds = 0.4, -- the lid flies, the cube pops out and swells
 	HoldSeconds = 0.9, -- the name card stays before play resumes
-	Particles = 70,
-	BoxColor = Color3.fromRGB(70, 50, 30),
-	LidColor = Color3.fromRGB(231, 174, 58),
+	-- The case wears the tier colour (Config.Boxes.Tiers): the body is that
+	-- colour darkened by BodyDarken, the seam and the beam are it in full.
+	-- The lid is gold with a lit rim, because from the locked camera the
+	-- lid is the biggest face of the prize and it must be the brightest.
+	BodyDarken = 0.35,
+	LidColor = Color3.fromRGB(238, 190, 70),
+	RimColor = Color3.fromRGB(255, 232, 160),
+	LidLift = 0.08, -- how far the lid lifts and slams at the top of the rattle
+	SeamHeight = 0.14,
+	SeamHeightEnd = 0.34, -- the seam widens to this through the rattle
+	GlyphBrightness = 1.4, -- the glowing "?" and tag, before the rattle doubles it
+	LampRange = 9,
+	LampPeak = 3, -- the lamp inside the case at the top of the rattle
+	SparkRate = 70, -- sparks leaking from the seam at the top of the rattle, per second
+	-- The stage: the hall dims and a pillar of the tier colour stands on the
+	-- station for the length of the hatch -- three neon layers, each wider
+	-- and fainter, so it has no visible edge, with motes drifting up it.
+	DimSeconds = 0.3,
+	DimBrightness = -0.22,
+	DimSaturation = -0.4,
+	BeamHeight = 16,
+	BeamLayers = {
+		{ Diameter = 2.4, Transparency = 0.8 },
+		{ Diameter = 4.6, Transparency = 0.9 },
+		{ Diameter = 7.0, Transparency = 0.96 },
+	},
+	BeamBaseHeight = 2.5,
+	BeamBaseTransparency = 0.72,
+	MoteRate = 14,
+	-- The burst: a flash that starts at the seam, a faint sheet on the
+	-- screen, a ring rolling across the floor, confetti chips in the six
+	-- cube colours thrown from the centre, and sparks.
+	FlashDiameter = 10,
+	FlashTransparency = 0.6,
+	FlashSeconds = 0.3,
+	RingDiameter = 26,
+	RingSeconds = 0.6,
+	Particles = 40,
+	ChipsPerColor = 14,
+	ChipTexture = "rbxasset://textures/ui/GuiImagePlaceholder.png", -- a plain square
+	ChipColors = {
+		Color3.fromRGB(245, 245, 245),
+		Color3.fromRGB(250, 220, 40),
+		Color3.fromRGB(40, 190, 80),
+		Color3.fromRGB(40, 100, 230),
+		Color3.fromRGB(230, 50, 50),
+		Color3.fromRGB(250, 130, 30),
+	},
 }
+
+-- The ScreenGui the HUD lives in (Theme.screen builds it; the hatch hides it).
+Config.HudScreenName = "SpeedCube"
 
 --------------------------------------------------------------------------------
 -- Products: Robux purchases (developer products)

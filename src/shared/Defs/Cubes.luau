@@ -2,14 +2,36 @@
 --[[
 	Cubes.luau -- every cube a box can hatch.
 
-	A cube is a LOOK (body colour, six sticker colours, stickerless or
-	not, what glows), a turning SOUND, and a coin MULTIPLIER. The Classic
-	cube is owned by everyone from the start and is the baseline look the
-	whole game was built on.
+	A cube is a LOOK (body, six sticker colours, the finish), a turning
+	SOUND, and a coin MULTIPLIER. The Classic cube is owned by everyone
+	from the start and is the baseline look the whole game was built on.
+
+	THE LADDER HAS TO READ WITHOUT A LABEL. The critic's first pass
+	(2026-09-24, art/critic-log.md) scored the set a 5 because a Rare
+	looked like a recoloured Common and the Legendary looked like an
+	overexposed photo. So each tier now owns a FINISH, not just a palette:
+
+	  Common     matte plastic, toy colours, a black body
+	  Rare       candy: a painted gloss highlight on every sticker, shaded
+	             lighter on top; Jelly is see-through
+	  Epic       light coming OUT of the cube: glowing stickers, or --
+	             Void -- a near-black cube leaking violet from thin seams
+	  Legendary  a rainbow across every face: the hue sweeps corner to
+	             corner over the whole cube so one frame shows the whole
+	             spectrum, glowing brighter than any Epic, sparks off it,
+	             a halo on the mat, and the client walks the hues round
+
+	Every tier ADDS something the tier below does not have; nothing at a
+	higher tier ever has less than the one under it (the critic's second
+	round, and Pet Simulator 99's rule).
 
 	Tiers, their colours and the box odds live in Config.Boxes. A cube's
 	`mult` should stay inside its tier's range noted there; the best cube
 	in the game multiplies coins by 1.5, no more (the CEO's cap).
+
+	The arrow prompt is hot magenta (Config.Cube.Arrow). No sticker in
+	this file may sit in that hue: the arrow has to read on every face of
+	every cube, and per-cube arrow colours (M4) do not change that rule.
 
 	Sounds are Roblox built-ins for now. Swap for Creator Store ids
 	("rbxassetid://...") when the cubes get their own.
@@ -21,7 +43,19 @@ export type Look = {
 	body: Color3,
 	stickers: { [string]: Color3 }, -- U D F B R L
 	stickerless: boolean, -- true: the colour fills the whole face, no black border
-	glow: string, -- "none" | "stickers" | "all"
+	glow: string, -- "none" | "stickers" | "body" | "all"
+	-- The finish. Everything below is optional and defaults to the Classic answer.
+	bodyMaterial: Enum.Material?, -- SmoothPlastic. Glass for gloss; Neon for a body that glows.
+	bodyTransparency: number?, -- 0. A little on Jelly, so you can nearly see into it.
+	reflectance: number?, -- 0
+	shade: { top: number, bottom: number }?, -- brightness by height: { 1.2, 0.8 } lightens the top row
+	glowBrightness: number?, -- Config.Cube.GlowStickerBrightness. The Prism uses less, so its faces keep their colour.
+	light: { color: Color3, brightness: number, range: number }?, -- a lamp inside the cube
+	prismatic: boolean?, -- the client slowly cycles the sticker hues
+	gloss: boolean?, -- a hard white highlight painted into the corner of every sticker
+	rim: boolean?, -- a darker rim round every sticker, the way light leaves the edge of a gummy
+	stickerInset: number?, -- overrides the sticker margin (Config.Cube.StickerInset)
+	sparkle: boolean?, -- white sparks off the surface, and a halo on the mat
 }
 
 export type Def = {
@@ -42,6 +76,8 @@ local function palette(u, d, f, b, r, l): { [string]: Color3 }
 	return { U = u, D = d, F = f, B = b, R = r, L = l }
 end
 
+local BLACK = rgb(20, 20, 24)
+
 local CLASSIC = palette(
 	rgb(245, 245, 245),
 	rgb(250, 220, 40),
@@ -57,13 +93,13 @@ local BUTTON = "rbxasset://sounds/button.wav"
 local PING = "rbxasset://sounds/electronicpingshort.wav"
 
 local LIST: { Def } = {
-	-- Common ------------------------------------------------------------
+	-- Common: matte plastic, toy colours, a black body ----------------------
 	{
 		id = "Classic",
 		name = "Classic",
 		tier = "Common",
 		mult = 1.0,
-		look = { body = rgb(20, 20, 24), stickers = CLASSIC, stickerless = false, glow = "none" },
+		look = { body = BLACK, stickers = CLASSIC, stickerless = false, glow = "none" },
 		sound = SWITCH,
 		blurb = "The one everybody starts with.",
 	},
@@ -73,20 +109,20 @@ local LIST: { Def } = {
 		tier = "Common",
 		mult = 1.02,
 		look = {
-			body = rgb(235, 240, 248),
+			body = BLACK,
 			stickers = palette(
 				rgb(255, 255, 255),
-				rgb(190, 215, 245),
-				rgb(120, 200, 230),
-				rgb(80, 130, 210),
-				rgb(160, 180, 240),
-				rgb(210, 230, 255)
+				rgb(110, 200, 255),
+				rgb(60, 170, 255),
+				rgb(40, 120, 240),
+				rgb(150, 215, 255),
+				rgb(215, 240, 255)
 			),
 			stickerless = false,
 			glow = "none",
 		},
 		sound = SWITCH,
-		blurb = "White body, cold colours.",
+		blurb = "Ice blues on black.",
 	},
 	{
 		id = "Ember",
@@ -96,12 +132,12 @@ local LIST: { Def } = {
 		look = {
 			body = rgb(60, 18, 14),
 			stickers = palette(
-				rgb(255, 230, 160),
-				rgb(255, 170, 40),
+				rgb(255, 235, 170),
+				rgb(255, 175, 40),
 				rgb(255, 110, 40),
-				rgb(200, 40, 30),
+				rgb(210, 40, 30),
 				rgb(255, 60, 60),
-				rgb(255, 140, 90)
+				rgb(255, 145, 90)
 			),
 			stickerless = false,
 			glow = "none",
@@ -115,14 +151,14 @@ local LIST: { Def } = {
 		tier = "Common",
 		mult = 1.04,
 		look = {
-			body = rgb(22, 40, 34),
+			body = rgb(14, 40, 30),
 			stickers = palette(
-				rgb(240, 255, 245),
-				rgb(180, 240, 200),
-				rgb(90, 220, 160),
-				rgb(40, 160, 130),
-				rgb(130, 230, 210),
-				rgb(200, 250, 220)
+				rgb(235, 255, 245),
+				rgb(120, 240, 170),
+				rgb(30, 210, 120),
+				rgb(10, 150, 110),
+				rgb(80, 230, 200),
+				rgb(170, 250, 200)
 			),
 			stickerless = false,
 			glow = "none",
@@ -136,42 +172,44 @@ local LIST: { Def } = {
 		tier = "Common",
 		mult = 1.05,
 		look = {
-			body = rgb(40, 42, 48),
+			body = rgb(54, 48, 46),
 			stickers = palette(
-				rgb(220, 222, 228),
-				rgb(160, 164, 172),
-				rgb(120, 126, 136),
-				rgb(80, 86, 96),
-				rgb(190, 194, 200),
-				rgb(140, 146, 156)
+				rgb(245, 240, 232),
+				rgb(160, 150, 140),
+				rgb(120, 110, 102),
+				rgb(78, 70, 64),
+				rgb(215, 205, 195),
+				rgb(140, 130, 122)
 			),
 			stickerless = false,
 			glow = "none",
 		},
 		sound = BUTTON,
-		blurb = "Six greys. Very serious.",
+		blurb = "Six warm greys. Very serious.",
 	},
-	-- Rare (stickerless) -------------------------------------------------
+	-- Rare: glossy candy, stickerless, lighter on top ------------------------
 	{
 		id = "Pastel",
 		name = "Pastel",
 		tier = "Rare",
 		mult = 1.1,
 		look = {
-			body = rgb(250, 250, 250),
+			body = rgb(215, 212, 222),
 			stickers = palette(
-				rgb(255, 250, 220),
-				rgb(255, 230, 160),
-				rgb(190, 240, 200),
-				rgb(180, 210, 255),
-				rgb(255, 180, 190),
-				rgb(255, 205, 160)
+				rgb(255, 232, 80),
+				rgb(255, 120, 170),
+				rgb(100, 230, 160),
+				rgb(100, 175, 255),
+				rgb(175, 130, 255),
+				rgb(255, 165, 100)
 			),
 			stickerless = true,
 			glow = "none",
+			gloss = true,
+			shade = { top = 1.05, bottom = 0.95 },
 		},
 		sound = SNAP,
-		blurb = "Stickerless, soft colours.",
+		blurb = "Lemon, bubblegum, mint, sky, lilac, peach.",
 	},
 	{
 		id = "Ocean",
@@ -179,20 +217,22 @@ local LIST: { Def } = {
 		tier = "Rare",
 		mult = 1.12,
 		look = {
-			body = rgb(10, 30, 50),
+			body = rgb(8, 28, 52),
 			stickers = palette(
-				rgb(200, 240, 255),
-				rgb(20, 90, 140),
-				rgb(40, 170, 200),
-				rgb(20, 60, 120),
-				rgb(60, 200, 220),
-				rgb(90, 130, 200)
+				rgb(190, 235, 255),
+				rgb(20, 80, 150),
+				rgb(30, 160, 220),
+				rgb(16, 60, 140),
+				rgb(50, 210, 235),
+				rgb(80, 120, 210)
 			),
 			stickerless = true,
 			glow = "none",
+			gloss = true,
+			shade = { top = 1.35, bottom = 0.7 },
 		},
 		sound = SNAP,
-		blurb = "Deep blues, stickerless.",
+		blurb = "Deep blue, lighter at the surface.",
 	},
 	{
 		id = "Sunset",
@@ -202,18 +242,20 @@ local LIST: { Def } = {
 		look = {
 			body = rgb(50, 20, 40),
 			stickers = palette(
-				rgb(255, 220, 120),
-				rgb(255, 150, 60),
-				rgb(255, 100, 90),
-				rgb(180, 60, 120),
-				rgb(255, 80, 130),
-				rgb(255, 170, 100)
+				rgb(255, 225, 110),
+				rgb(255, 80, 160),
+				rgb(255, 120, 60),
+				rgb(200, 60, 140),
+				rgb(255, 90, 110),
+				rgb(255, 160, 70)
 			),
 			stickerless = true,
 			glow = "none",
+			gloss = true,
+			shade = { top = 1.2, bottom = 0.8 },
 		},
 		sound = SNAP,
-		blurb = "Orange to pink, stickerless.",
+		blurb = "Orange at the top, pink at the bottom.",
 	},
 	{
 		id = "Jelly",
@@ -221,22 +263,27 @@ local LIST: { Def } = {
 		tier = "Rare",
 		mult = 1.15,
 		look = {
-			body = rgb(30, 30, 40),
+			body = rgb(62, 18, 110),
 			stickers = palette(
-				rgb(240, 255, 120),
-				rgb(255, 120, 200),
-				rgb(120, 255, 200),
-				rgb(120, 160, 255),
-				rgb(255, 120, 120),
-				rgb(200, 120, 255)
+				rgb(215, 150, 255),
+				rgb(120, 40, 220),
+				rgb(175, 90, 255),
+				rgb(140, 60, 235),
+				rgb(195, 120, 255),
+				rgb(155, 75, 245)
 			),
 			stickerless = true,
 			glow = "none",
+			gloss = true,
+			rim = true,
+			bodyMaterial = Enum.Material.Glass,
+			bodyTransparency = 0.4,
+			shade = { top = 1.2, bottom = 0.85 },
 		},
 		sound = PING,
-		blurb = "Candy colours, stickerless.",
+		blurb = "Grape gummy. Light gets in.",
 	},
-	-- Epic (glowing stickers) --------------------------------------------
+	-- Epic: light coming out of the cube -----------------------------------
 	{
 		id = "Neon",
 		name = "Neon",
@@ -266,18 +313,18 @@ local LIST: { Def } = {
 		look = {
 			body = rgb(16, 10, 24),
 			stickers = palette(
-				rgb(255, 120, 255),
-				rgb(180, 60, 255),
-				rgb(120, 200, 255),
-				rgb(80, 80, 255),
-				rgb(255, 80, 200),
-				rgb(200, 120, 255)
+				rgb(230, 200, 255),
+				rgb(160, 60, 255),
+				rgb(90, 220, 255),
+				rgb(70, 90, 255),
+				rgb(200, 90, 255),
+				rgb(140, 160, 255)
 			),
 			stickerless = false,
 			glow = "stickers",
 		},
 		sound = PING,
-		blurb = "Purple and pink, glowing.",
+		blurb = "Violet and cyan, glowing.",
 	},
 	{
 		id = "Void",
@@ -285,20 +332,25 @@ local LIST: { Def } = {
 		tier = "Epic",
 		mult = 1.25,
 		look = {
-			body = rgb(6, 6, 8),
+			-- The body glows a deep violet and the stickers are nearly
+			-- black and nearly edge to edge, so what leaks out is a thin
+			-- violet seam: the cube that looks like it is hiding something.
+			body = rgb(96, 20, 160),
 			stickers = palette(
-				rgb(200, 200, 210),
-				rgb(120, 100, 200),
-				rgb(90, 60, 180),
-				rgb(50, 30, 120),
-				rgb(150, 90, 230),
-				rgb(80, 60, 150)
+				rgb(30, 24, 40),
+				rgb(20, 14, 30),
+				rgb(26, 20, 36),
+				rgb(16, 12, 24),
+				rgb(34, 24, 46),
+				rgb(24, 18, 34)
 			),
 			stickerless = false,
-			glow = "stickers",
+			stickerInset = 0.045,
+			glow = "body",
+			light = { color = rgb(160, 70, 255), brightness = 1.2, range = 5 },
 		},
 		sound = PING,
-		blurb = "Almost black. The stickers hum.",
+		blurb = "Almost black. Something violet inside.",
 	},
 	-- Legendary ------------------------------------------------------------
 	{
@@ -307,20 +359,26 @@ local LIST: { Def } = {
 		tier = "Legendary",
 		mult = 1.5,
 		look = {
-			body = rgb(255, 255, 255),
+			body = rgb(40, 40, 52),
 			stickers = palette(
-				rgb(255, 255, 255),
-				rgb(255, 230, 80),
-				rgb(80, 255, 160),
-				rgb(80, 160, 255),
-				rgb(255, 80, 120),
-				rgb(255, 160, 60)
+				rgb(255, 60, 60),
+				rgb(255, 150, 40),
+				rgb(255, 230, 60),
+				rgb(60, 230, 90),
+				rgb(60, 150, 255),
+				rgb(170, 80, 255)
 			),
 			stickerless = false,
-			glow = "all",
+			glow = "stickers",
+			glowBrightness = 2.4,
+			bodyMaterial = Enum.Material.Metal,
+			reflectance = 0.35,
+			light = { color = rgb(255, 255, 255), brightness = 2.6, range = 9 },
+			prismatic = true,
+			sparkle = true,
 		},
 		sound = "rbxasset://sounds/victory.wav",
-		blurb = "The whole cube glows. Coins x1.5.",
+		blurb = "A rainbow across every face, drifting. Coins x1.5.",
 	},
 }
 

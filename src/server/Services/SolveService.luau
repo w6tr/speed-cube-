@@ -136,7 +136,7 @@ local function updateLeaderstats(state: State, data: SaveService.PlayerData)
 	-- And on their own mat, for them: the same figure the HUD shows.
 	Arena.setStationBest(
 		state.pedestalIndex,
-		if best then `BEST {formatSeconds(best)}  ·  depth {depth}` else ""
+		if best then `BEST {formatSeconds(best)}` else "" -- short: it hides behind the cube from the owner's seat
 	)
 end
 

@@ -210,6 +210,30 @@ function CubeView.build(root: CFrame, options: Options?): Api
 		return out
 	end
 
+	-- The row or column about to turn is drawn a notch brighter and every
+	-- other sticker a notch dimmer, so "this slice" reads before the
+	-- colours do. Re-run after every turn: the layer's membership changes.
+	local promptedMove: string? = nil
+	local function highlight()
+		local A = Config.Cube.Arrow
+		local def = if promptedMove then Moves.get(promptedMove) else nil
+		local inLayer: { [Part]: boolean } = {}
+		if def then
+			for _, c in layerOf(def) do
+				inLayer[c.part] = true
+			end
+		end
+		for _, c in live do
+			local factor = if not def then 1 elseif inLayer[c.part] then A.SliceBoost else A.RestDim
+			for _, gui in c.part:GetChildren() do
+				if gui:IsA("SurfaceGui") then
+					local base = gui:GetAttribute("BaseBrightness")
+					gui.Brightness = (if type(base) == "number" then base else 1) * factor
+				end
+			end
+		end
+	end
+
 	local function applyInstant(move: string)
 		local def = Moves.get(move)
 		if not def then
@@ -271,6 +295,7 @@ function CubeView.build(root: CFrame, options: Options?): Api
 				local job = table.remove(queue, 1) :: Job
 				sound("Turn")
 				runJob(job)
+				highlight()
 				if job.done then
 					job.done()
 				end
@@ -334,7 +359,11 @@ function CubeView.build(root: CFrame, options: Options?): Api
 	arrow.CanTouch = false
 	arrow.CastShadow = false
 	arrow.Transparency = 1
-	arrow.Size = Vector3.new(pitch * 3, pitch, 0.05)
+	-- The slab hugs the stickers of the row: three cubies long and one
+	-- cubie tall, not three pitches, so the lit frame round it lands on the
+	-- row's own corners and never hangs off the cube's base.
+	local extent = size * 3 + Config.Cube.Gap * 2
+	arrow.Size = Vector3.new(extent, size, 0.05)
 	arrow.Parent = built.model
 
 	local arrowGui = Instance.new("SurfaceGui")
@@ -345,30 +374,94 @@ function CubeView.build(root: CFrame, options: Options?): Api
 	arrowGui.PixelsPerStud = 100
 	arrowGui.Parent = arrow
 
-	local arrowLayout = glyphLayout(arrowGui)
-	local glyphs: { TextLabel } = {}
-	for i = 1, 3 do
-		local g = Instance.new("TextLabel")
-		g.Name = `Glyph{i}`
-		g.BackgroundTransparency = 1
-		g.Font = Enum.Font.GothamBlack
-		g.TextSize = A.TextSize
-		g.TextColor3 = A.Color
-		g.Text = ""
-		g.LayoutOrder = i
-		g.Parent = arrowGui
+	arrowGui.Brightness = A.Brightness
 
-		-- A real outline, not TextStroke: the arrow has to hold its shape
-		-- over a white sticker, a yellow one and a glowing one, and
-		-- TextStroke is too thin to do that.
+	local arrowLayout = glyphLayout(arrowGui)
+	local cells: { Frame } = {}
+	local glyphs: { TextLabel } = {}
+	local shadows: { TextLabel } = {}
+	local edges: { UIStroke } = {}
+	for i = 1, 3 do
+		-- One cell per sticker of the row. The glyph is centred in its cell
+		-- and sized as a fraction of it, so it lands in the middle of the
+		-- sticker at the same size whatever the font makes of the character.
+		local cell = Instance.new("Frame")
+		cell.Name = `Cell{i}`
+		cell.BackgroundTransparency = 1
+		cell.LayoutOrder = i
+		cell.Parent = arrowGui
+
+		local function label(name: string, fill: number, z: number): TextLabel
+			local t = Instance.new("TextLabel")
+			t.Name = name
+			t.AnchorPoint = Vector2.new(0.5, 0.5)
+			t.Position = UDim2.fromScale(0.5, 0.5)
+			t.Size = UDim2.fromScale(fill, fill)
+			t.BackgroundTransparency = 1
+			t.Font = Enum.Font.GothamBlack
+			t.TextScaled = true
+			t.Text = ""
+			t.ZIndex = z
+			t.Parent = cell
+			return t
+		end
+
+		-- A soft dark halo behind the glyph, so it holds on a glowing
+		-- sticker as well as on a dark one.
+		local shadow = label("Halo", A.Fill * A.HaloScale, 1)
+		shadow.TextColor3 = A.StrokeColor
+		shadow.TextTransparency = A.HaloTransparency
+
+		local g = label("Glyph", A.Fill, 2)
+		g.TextColor3 = A.Core
+
+		-- The colour lives on the EDGE: a white-hot core beats a white
+		-- sticker on brightness, and the coloured stroke keeps the hue. A
+		-- real outline, not TextStroke, which is too thin to hold a shape.
 		local outline = Instance.new("UIStroke")
 		outline.Name = "Outline"
-		outline.Color = A.StrokeColor
+		outline.Color = A.Color
 		outline.Thickness = A.StrokeThickness
 		outline.Parent = g
 
+		-- The dark outline sits outside the coloured edge, on the halo.
+		local dark = Instance.new("UIStroke")
+		dark.Name = "Dark"
+		dark.Color = A.StrokeColor
+		dark.Thickness = A.DarkThickness
+		dark.Transparency = A.HaloTransparency
+		dark.Parent = shadow
+
+		table.insert(cells, cell)
 		table.insert(glyphs, g)
+		table.insert(shadows, shadow)
+		table.insert(edges, outline)
 	end
+
+	-- A glowing frame round the whole row about to turn: a spotlight on
+	-- the slice, instead of a hue shift on its stickers.
+	local rowGui = Instance.new("SurfaceGui")
+	rowGui.Name = "RowGlow"
+	rowGui.Face = Enum.NormalId.Back
+	rowGui.AlwaysOnTop = true
+	rowGui.LightInfluence = 0
+	rowGui.Brightness = A.Brightness
+	rowGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	rowGui.PixelsPerStud = 100
+	rowGui.Enabled = false
+	rowGui.Parent = arrow
+	local rowFrame = Instance.new("Frame")
+	rowFrame.Size = UDim2.fromScale(1, 1)
+	rowFrame.BackgroundTransparency = 1
+	rowFrame.Parent = rowGui
+	local rowCorner = Instance.new("UICorner")
+	rowCorner.CornerRadius = UDim.new(0.06, 0)
+	rowCorner.Parent = rowFrame
+	local rowEdge = Instance.new("UIStroke")
+	rowEdge.Color = A.Color
+	rowEdge.Thickness = A.RowGlowThickness
+	rowEdge.Transparency = A.RowGlowTransparency
+	rowEdge.Parent = rowFrame
 
 	-- The first glyph is tweened; the other two copy it.
 	glyphs[1]:GetPropertyChangedSignal("TextTransparency"):Connect(function()
@@ -404,13 +497,15 @@ function CubeView.build(root: CFrame, options: Options?): Api
 	local function flashWrong()
 		flashToken += 1
 		local token = flashToken
-		for _, g in glyphs do
+		for i, g in glyphs do
 			g.TextColor3 = A.WrongColor
+			edges[i].Color = A.WrongColor
 		end
 		task.delay(A.WrongFlashSeconds, function()
 			if token == flashToken then
-				for _, g in glyphs do
-					g.TextColor3 = A.Color
+				for i, g in glyphs do
+					g.TextColor3 = A.Core
+					edges[i].Color = A.Color
 				end
 			end
 		end)
@@ -418,18 +513,22 @@ function CubeView.build(root: CFrame, options: Options?): Api
 
 	local function prompt(move: string?)
 		local def = if move and not opts.noArrow then Moves.get(move) else nil
+		promptedMove = if def then move else nil
 		if not def then
-			for _, g in glyphs do
+			for i, g in glyphs do
 				g.Text = ""
+				shadows[i].Text = ""
 			end
 			setPulse(false)
+			rowGui.Enabled = false
+			highlight()
 			return
 		end
 		local glyph = ARROWS[def.direction]
 		local horizontal = def.row ~= nil
 		arrow.Size = if horizontal
-			then Vector3.new(pitch * 3, pitch, 0.05)
-			else Vector3.new(pitch, pitch * 3, 0.05)
+			then Vector3.new(extent, size, 0.05)
+			else Vector3.new(size, extent, 0.05)
 		local offset = if horizontal
 			then CFrame.new(0, (def.row :: number) * pitch, pitch * 1.5 + A.Offset)
 			else CFrame.new((def.column :: number) * pitch, 0, pitch * 1.5 + A.Offset)
@@ -437,12 +536,84 @@ function CubeView.build(root: CFrame, options: Options?): Api
 		arrowLayout.FillDirection = if horizontal
 			then Enum.FillDirection.Horizontal
 			else Enum.FillDirection.Vertical
-		for _, g in glyphs do
-			g.Text = glyph
-			g.Size = if horizontal then UDim2.fromScale(1 / 3, 1) else UDim2.fromScale(1, 1 / 3)
+		for i, cell in cells do
+			cell.Size = if horizontal then UDim2.fromScale(1 / 3, 1) else UDim2.fromScale(1, 1 / 3)
+			glyphs[i].Text = glyph
+			shadows[i].Text = glyph
 		end
 		setPulse(true)
+		rowGui.Enabled = true
+		highlight()
 	end
+
+	----------------------------------------------------------------------------
+	-- The rim light and the prism
+	----------------------------------------------------------------------------
+
+	-- A cool lamp behind and above the player's own cube, so its top edges
+	-- catch a colour the hall's lamps do not give them. Spectator cubes go
+	-- without: they are small, far, and eight of them would be eight lamps.
+	local rim: Part? = nil
+	if not opts.noArrow then
+		local R = Config.Cube.Rim
+		local holder = Instance.new("Part")
+		holder.Name = "Rim"
+		holder.Anchored = true
+		holder.CanCollide = false
+		holder.CanQuery = false
+		holder.CanTouch = false
+		holder.CastShadow = false
+		holder.Transparency = 1
+		holder.Size = Vector3.new(0.2, 0.2, 0.2)
+		holder.CFrame = CFrame.lookAt(rootCF:PointToWorldSpace(R.Offset), rootCF.Position)
+		holder.Parent = built.model
+		local spot = Instance.new("SpotLight")
+		spot.Face = Enum.NormalId.Front
+		spot.Color = R.Color
+		spot.Brightness = R.Brightness
+		spot.Range = R.Range
+		spot.Angle = R.Angle
+		spot.Shadows = false
+		spot.Parent = holder
+		rim = holder
+	end
+
+	-- A prismatic look walks every sticker round the colour wheel, slowly.
+	-- The base colours are the attributes applyLook left on each sticker,
+	-- so a look change simply repaints and the loop picks up the new ones.
+	local prismToken = 0
+	local function setPrismatic(on: boolean)
+		prismToken += 1
+		if not on then
+			return
+		end
+		local token = prismToken
+		task.spawn(function()
+			local t0 = os.clock()
+			while token == prismToken and not destroyed do
+				local shift = ((os.clock() - t0) * Config.Cube.PrismCycleHz) % 1
+				for _, c in live do
+					for _, gui in c.part:GetChildren() do
+						if gui:IsA("SurfaceGui") then
+							local base = gui:GetAttribute("BaseColor")
+							local fill = gui:FindFirstChild("Fill")
+							if typeof(base) == "Color3" and fill and fill:IsA("Frame") then
+								local h, sat, v = base:ToHSV()
+								local color = Color3.fromHSV((h + shift) % 1, sat, v)
+								fill.BackgroundColor3 = color
+								local glow = fill:FindFirstChild("Glow")
+								if glow and glow:IsA("UIStroke") then
+									glow.Color = color
+								end
+							end
+						end
+					end
+				end
+				task.wait(Config.Cube.PrismStepSeconds)
+			end
+		end)
+	end
+	setPrismatic((opts.look or (Cubes.get(Cubes.Default) :: Cubes.Def).look).prismatic == true)
 
 	----------------------------------------------------------------------------
 	-- Pop and shake
@@ -535,7 +706,10 @@ function CubeView.build(root: CFrame, options: Options?): Api
 	----------------------------------------------------------------------------
 
 	local function setLook(look: Cubes.Look, turnId: string?)
+		setPrismatic(false)
 		CubeBuilder.applyLook(built, look)
+		highlight()
+		setPrismatic(look.prismatic == true)
 		setBurstColors(look.stickers)
 		setTurnSound(turnId)
 	end
@@ -549,6 +723,17 @@ function CubeView.build(root: CFrame, options: Options?): Api
 				end
 			end
 		end
+		for _, light in built.core:GetChildren() do
+			if light:IsA("Light") then
+				light.Enabled = on
+			end
+		end
+		if rim then
+			local spot = rim:FindFirstChildOfClass("SpotLight")
+			if spot then
+				spot.Enabled = on
+			end
+		end
 		if not on then
 			prompt(nil)
 		end
@@ -557,6 +742,11 @@ function CubeView.build(root: CFrame, options: Options?): Api
 	local function setRoot(root2: CFrame)
 		rootCF = root2
 		burst.CFrame = rootCF
+		built.core.CFrame = rootCF
+		if rim then
+			rim.CFrame =
+				CFrame.lookAt(rootCF:PointToWorldSpace(Config.Cube.Rim.Offset), rootCF.Position)
+		end
 		place()
 	end
 
@@ -564,6 +754,7 @@ function CubeView.build(root: CFrame, options: Options?): Api
 		destroyed = true
 		queue = {}
 		setPulse(false)
+		setPrismatic(false)
 		for _, s in sounds do
 			s:Destroy()
 		end

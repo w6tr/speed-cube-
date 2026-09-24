@@ -51,10 +51,10 @@ export type Api = {
 
 local ARROWS: { [string]: string } = { Up = "▲", Down = "▼", Left = "◀", Right = "▶" }
 local KEYS: { [string]: string } = {
-	Up = "W or Up arrow",
-	Down = "S or Down arrow",
-	Left = "A or Left arrow",
-	Right = "D or Right arrow",
+	Up = "W  /  UP",
+	Down = "S  /  DOWN",
+	Left = "A  /  LEFT",
+	Right = "D  /  RIGHT",
 }
 
 local function comboMult(combo: number): number
@@ -81,6 +81,7 @@ end
 function Hud.build(parent: Instance, callbacks: Callbacks): Api
 	local C = Theme.Colors
 	local H = Config.Hud
+	local A = Config.Cube.Arrow
 
 	----------------------------------------------------------------------------
 	-- Top row
@@ -127,48 +128,80 @@ function Hud.build(parent: Instance, callbacks: Callbacks): Api
 	-- The arrow lane
 	----------------------------------------------------------------------------
 
-	local lane = Instance.new("Frame")
-	lane.Name = "Lane"
-	lane.Size = UDim2.new(0, 260, 0, H.LaneHeight)
-	lane.Position = UDim2.new(0.5, -130, 0, 102)
-	lane.BackgroundTransparency = 1
-	lane.Parent = parent
-	local laneLayout = Theme.list(lane, 14, true)
+	-- One glyph, everywhere: the cube's three-ring arrow (white core,
+	-- magenta edge, dark outline) is drawn the same way in the lane and on
+	-- the prompt pill, so a phone player reads one shape at every size.
+	local function ringGlyph(
+		holder: Instance,
+		name: string,
+		textSize: number,
+		dim: boolean
+	): TextLabel
+		local shadow = Theme.label(
+			holder,
+			name .. "Shadow",
+			"",
+			UDim2.new(1, 0, 1, 0),
+			UDim2.new(0, 0, 0, 0),
+			textSize,
+			{
+				align = Enum.TextXAlignment.Center,
+				font = Enum.Font.GothamBlack,
+				color = A.StrokeColor,
+			}
+		)
+		Theme.stroke(shadow, A.StrokeColor, math.max(4, textSize * 0.16))
+		local g =
+			Theme.label(holder, name, "", UDim2.new(1, 0, 1, 0), UDim2.new(0, 0, 0, 0), textSize, {
+				align = Enum.TextXAlignment.Center,
+				font = Enum.Font.GothamBlack,
+				color = if dim then A.Core:Lerp(C.Surface, 0.35) else A.Core,
+			})
+		g.ZIndex = 2
+		Theme.stroke(
+			g,
+			if dim then A.Color:Lerp(C.Surface, 0.35) else A.Color,
+			math.max(2, textSize * 0.09)
+		)
+		g:GetPropertyChangedSignal("Text"):Connect(function()
+			shadow.Text = g.Text
+		end)
+		return g
+	end
+
+	local lane = Theme.frame(
+		parent,
+		"Lane",
+		UDim2.new(0, 200, 0, H.LaneHeight),
+		UDim2.new(0.5, -100, 0, 102)
+	)
+	lane.BackgroundTransparency = 0.12
+	local laneLayout = Theme.list(lane, 10, true)
 	laneLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	laneLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 
 	local laneGlyphs: { TextLabel } = {}
 	for i = 1, H.LaneSize do
 		local big = i == 1
-		local g = Theme.label(
-			lane,
-			`Arrow{i}`,
-			"",
-			UDim2.new(0, if big then 56 else 34, 1, 0),
-			UDim2.new(0, 0, 0, 0),
-			if big then H.LaneBigSize else H.LaneSmallSize,
-			{
-				align = Enum.TextXAlignment.Center,
-				font = Enum.Font.GothamBlack,
-				color = if big then C.Ink else C.InkSoft,
-			}
+		local cell = Instance.new("Frame")
+		cell.Name = `Cell{i}`
+		cell.Size = UDim2.new(0, if big then 56 else 40, 1, 0)
+		cell.BackgroundTransparency = 1
+		cell.LayoutOrder = i
+		cell.Parent = lane
+		table.insert(
+			laneGlyphs,
+			ringGlyph(cell, "Arrow", if big then H.LaneBigSize else H.LaneSmallSize, not big)
 		)
-		g.LayoutOrder = i
-		table.insert(laneGlyphs, g)
 	end
 
-	local bestLabel = Theme.label(
-		parent,
-		"Best",
-		"",
-		UDim2.new(0, 300, 0, 22),
-		UDim2.new(0.5, -150, 0, 102 + H.LaneHeight),
-		14,
-		{
-			align = Enum.TextXAlignment.Center,
+	local bestLabel =
+		Theme.label(parent, "Best", "", UDim2.new(0, 300, 0, 22), UDim2.new(1, -316, 1, -112), 14, {
+			align = Enum.TextXAlignment.Right,
 			color = C.InkSoft,
-		}
-	)
+		})
+	-- It sits above the depth dial, not on the cube's head: it is the best
+	-- at the dial's depth, so that is where it belongs.
 	-- A plate under HUD text. From every seat there is scenery behind this
 	-- line, and HUD text printed straight over a 3D hall is unreadable.
 	-- (The original offender was the leaderboard pillar, which printed
@@ -225,18 +258,26 @@ function Hud.build(parent: Instance, callbacks: Callbacks): Api
 	-- Hint, nudge, dial, CUBES
 	----------------------------------------------------------------------------
 
-	local hintLabel = Theme.label(
-		parent,
-		"Hint",
-		"",
-		UDim2.new(0, 500, 0, 40),
-		UDim2.new(0.5, -250, 1, -120),
-		22,
-		{
-			align = Enum.TextXAlignment.Center,
-			font = Enum.Font.GothamBlack,
-		}
-	)
+	-- The prompt under the cube speaks the cube's own arrow language: the
+	-- same fat magenta glyph on a dark pill, with the key hint small beside
+	-- it, so a phone player reads glyph, glyph, glyph and never a sentence.
+	local hint =
+		Theme.frame(parent, "Hint", UDim2.new(0, 250, 0, 58), UDim2.new(0.5, -125, 1, -124))
+	hint.BackgroundTransparency = 0.12
+	hint.Visible = false
+	local hintCell = Instance.new("Frame")
+	hintCell.Name = "GlyphCell"
+	hintCell.Size = UDim2.new(0, 70, 1, 0)
+	hintCell.Position = UDim2.new(0, 14, 0, 0)
+	hintCell.BackgroundTransparency = 1
+	hintCell.Parent = hint
+	local hintGlyph = ringGlyph(hintCell, "Glyph", 46, false)
+	local hintKey =
+		Theme.label(hint, "Key", "", UDim2.new(1, -100, 1, 0), UDim2.new(0, 92, 0, 0), 16, {
+			align = Enum.TextXAlignment.Left,
+			font = Enum.Font.GothamBold,
+			color = C.InkSoft,
+		})
 
 	local nudge =
 		Theme.frame(parent, "Nudge", UDim2.new(0, 560, 0, 64), UDim2.new(0.5, -280, 1, -200))
@@ -392,11 +433,12 @@ function Hud.build(parent: Instance, callbacks: Callbacks): Api
 
 	local function setHint(direction: string?, isTouch: boolean)
 		if not direction then
-			hintLabel.Text = ""
+			hint.Visible = false
 			return
 		end
-		local arrow = ARROWS[direction] or ""
-		hintLabel.Text = if isTouch then `SWIPE {arrow}` else `{arrow}   {KEYS[direction]}`
+		hintGlyph.Text = ARROWS[direction] or ""
+		hintKey.Text = if isTouch then "SWIPE" else KEYS[direction] or ""
+		hint.Visible = true
 	end
 
 	local function setTutorial(on: boolean, isTouch: boolean)

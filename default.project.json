@@ -31,7 +31,8 @@
     "Workspace": {
       "$properties": {
         "Gravity": 196.2,
-        "FallenPartsDestroyHeight": -200
+        "FallenPartsDestroyHeight": -200,
+        "StreamingEnabled": false
       }
     },
 

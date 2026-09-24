@@ -14,3 +14,7 @@ a preview, and put the cube back.
 
 The pop needs no script: dial the depth to 3, read the arrow lane, and
 send the last key with `burst.ps1 -Keys '{UP}'`.
+
+These files are pasted as ONE line (newlines become spaces), so they may
+not contain `--` comments: a comment would swallow the rest of the script.
+`typeburst.ps1` drops full-line comments; do not rely on it for trailing ones.
