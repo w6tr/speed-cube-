@@ -195,6 +195,13 @@ local function sparkle(core: Part, on: boolean)
 	e.Parent = core
 end
 
+-- The colour a sticker gets under `look`: the face's colour, shaded by
+-- height and swept through the spectrum if the look asks for either.
+local function stickerColor(look: Cubes.Look, face: string, home: CFrame, pitch: number): Color3
+	local base = look.stickers[face] or look.body
+	return spectral(look, shaded(base, shadeAt(look, home.Y, pitch)), home, pitch)
+end
+
 --[[
 	Restyle every cubie of a built cube to `look`.
 
@@ -219,16 +226,10 @@ function CubeBuilder.applyLook(cube: Cube, look: Cubes.Look)
 		part.Material = material
 		part.Transparency = transparency
 		part.Reflectance = look.reflectance or 0
-		local shade = shadeAt(look, cubie.home.Y, cube.pitch)
 		for _, child in part:GetChildren() do
 			if child:IsA("SurfaceGui") then
 				local face = string.sub(child.Name, -1)
-				local color = spectral(
-					look,
-					shaded(look.stickers[face] or look.body, shade),
-					cubie.home,
-					cube.pitch
-				)
+				local color = stickerColor(look, face, cubie.home, cube.pitch)
 				local fill = child:FindFirstChild("Fill") :: Frame
 				fill.BackgroundColor3 = color
 				-- A see-through body needs see-through faces, or the
@@ -329,6 +330,84 @@ function CubeBuilder.build(parent: Instance, name: string, root: CFrame, look: C
 	CubeBuilder.applyLook(cube, look or (classic :: Cubes.Def).look)
 	model.Parent = parent
 	return cube
+end
+
+--[[
+	A cube for a ViewportFrame (the CUBES screen's cards). Viewports draw
+	parts and nothing else -- no SurfaceGuis, no lights, no particles --
+	so the stickers here are thin parts on each face instead of paint.
+	`locked` draws the cube as a dark silhouette: the shape you have not
+	earned yet, in the colour of nothing.
+]]
+function CubeBuilder.buildPreview(parent: Instance, look: Cubes.Look, locked: boolean): Model
+	local size = Config.Cube.CubieSize
+	local gap = Config.Cube.Gap
+	local pitch = size + gap
+	local inset = look.stickerInset
+		or (if look.stickerless then 0.015 else Config.Cube.StickerInset)
+	local glowStickers = look.glow == "stickers" or look.glow == "all"
+	local glowBody = look.glow == "all" or look.glow == "body"
+
+	local model = Instance.new("Model")
+	model.Name = "Preview"
+	for x = -1, 1 do
+		for y = -1, 1 do
+			for z = -1, 1 do
+				if x ~= 0 or y ~= 0 or z ~= 0 then
+					local home = CFrame.new(x * pitch, y * pitch, z * pitch)
+					local part = Instance.new("Part")
+					part.Name = `Cubie_{x}_{y}_{z}`
+					part.Size = Vector3.new(size, size, size)
+					part.Anchored = true
+					part.CanCollide = false
+					part.CanQuery = false
+					part.CastShadow = false
+					part.Color = if locked then Color3.fromRGB(14, 14, 18) else look.body
+					part.Material = if not locked
+							and (
+								look.bodyMaterial or (if glowBody then Enum.Material.Neon else nil)
+							)
+						then (look.bodyMaterial or Enum.Material.Neon)
+						else Enum.Material.SmoothPlastic
+					part.CFrame = home
+					part.Parent = model
+
+					local grid = { X = x, Y = y, Z = z }
+					for _, face in FACES do
+						if grid[face.axis] == face.sign then
+							local slab = Instance.new("Part")
+							slab.Name = `Sticker_{face.face}`
+							slab.Anchored = true
+							slab.CanCollide = false
+							slab.CanQuery = false
+							slab.CastShadow = false
+							local span = size * (1 - inset * 2)
+							local normal = Vector3.new(
+								if face.axis == "X" then face.sign else 0,
+								if face.axis == "Y" then face.sign else 0,
+								if face.axis == "Z" then face.sign else 0
+							)
+							slab.Size = Vector3.new(
+								if normal.X ~= 0 then 0.02 else span,
+								if normal.Y ~= 0 then 0.02 else span,
+								if normal.Z ~= 0 then 0.02 else span
+							)
+							slab.CFrame = home * CFrame.new(normal * (size / 2 + 0.01))
+							slab.Color = if locked
+								then Color3.fromRGB(28, 28, 34)
+								else stickerColor(look, face.face, home, pitch)
+							slab.Material = if not locked and glowStickers
+								then Enum.Material.Neon
+								else Enum.Material.SmoothPlastic
+							slab.Parent = model
+						end
+					end
+				end
+			end
+		end
+	end
+	model.Parent = parent
+	return model
 end
 
 return CubeBuilder

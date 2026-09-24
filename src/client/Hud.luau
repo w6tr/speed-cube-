@@ -175,7 +175,7 @@ function Hud.build(parent: Instance, callbacks: Callbacks): Api
 		UDim2.new(0, 200, 0, H.LaneHeight),
 		UDim2.new(0.5, -100, 0, 102)
 	)
-	lane.BackgroundTransparency = 0.12
+	lane.BackgroundTransparency = 0
 	local laneLayout = Theme.list(lane, 10, true)
 	laneLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	laneLayout.VerticalAlignment = Enum.VerticalAlignment.Center
@@ -263,7 +263,7 @@ function Hud.build(parent: Instance, callbacks: Callbacks): Api
 	-- it, so a phone player reads glyph, glyph, glyph and never a sentence.
 	local hint =
 		Theme.frame(parent, "Hint", UDim2.new(0, 250, 0, 58), UDim2.new(0.5, -125, 1, -124))
-	hint.BackgroundTransparency = 0.12
+	hint.BackgroundTransparency = 0
 	hint.Visible = false
 	local hintCell = Instance.new("Frame")
 	hintCell.Name = "GlyphCell"

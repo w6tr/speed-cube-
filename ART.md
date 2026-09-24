@@ -28,16 +28,16 @@ question below.
 | Rarity tint on the station (per tier) | `Arena.setStationTier` | built | yes (Epic purple confirmed) | scored with the stations: the system is right, the Epic trim is the arrows' magenta |
 | Sprint crown — the winner's station lit white | `Arena.setStationCrown` | built | yes (painted client-side for the capture) | scored with the stations: white reads as "that light is on", not "winner"; keep white, add a cone from above; green would be worse |
 | The crowd in the stands | `Arena.luau`, `Stands.Crowd` | built | **invisible from any seat** | not scorable; the hall critic wants the front rows lit with a crowd you can see |
-| The cube — 26 parts, SurfaceGui stickers, rounded | `CubeBuilder.luau` | built | yes | **6** (r1) — owns the frame; the arrows are the quietest thing on it |
-| 13 cube looks — 5 Common recolours, 4 Rare stickerless, 3 Epic glow, 1 Legendary Prism | `Defs/Cubes.luau` | built | **yes, all 13** (cycled on the live pedestal) | **5** (r1) — Rare reads as Common, Prism is a lightbulb, no material variety |
-| Arrow prompts — magenta glyphs, outlined, pulsing | `CubeView.luau`, `Config.Cube.Arrow` | built | yes | scored with the cube: **6** — a third of a sticker wide, off-centre, unlit |
+| The cube — 26 parts, SurfaceGui stickers, rounded | `CubeBuilder.luau` | built | yes | **7.75** (r4, out of rounds; 6 → 7 → 7.5 → 7.75) — the arrow layer is the instruction now; a filament and a red-safe ring are queued |
+| 13 cube looks — a finish per tier: matte Commons, candy Rares, Epics that emit light, a rainbow Prism | `Defs/Cubes.luau`, `CubeBuilder.luau` | built | **yes, all 13** (cycled on the live pedestal) | **8** (r4, CLEARED; 5 → 6 → 7 → 8) — Jelly reads dark, queued first for any later pass |
+| Arrow prompts — white-cored magenta three-ring glyphs, a lit bezel on the moving row, the same glyph in the lane and the pill | `CubeView.luau`, `Hud.luau`, `Config.Cube.Arrow` | built | yes | scored with the cube: **7.75** |
 | The pop — swell + confetti burst + result card | `CubeView.luau`, `Toasts.luau` | built | yes (captured 0.5 s after a solve) | **5** (r1) — a receipt, not a reward; the card hides the cube |
-| The hatch — box drop, shake, reveal, burst | `Hatch.luau` | built | yes (26 frames, no purchase) | **4** (r1) — an unlit black crate for 1.25 s; the drop exposes the avatar; wrong game |
+| The hatch — a sealed competition case in the tier colour on a dimmed stage: gold lid, lit seam, a soft pillar of light, sparks, a flash from the seam, sticker-chip confetti | `Hatch.luau`, `Config.Hatch` | built | yes (34 frames per round, no purchase) | **7** (r3; 4 → 6 → 7) — round 4 is BUILT (sticker-part chips, a nine-layer pillar, a gold lid face, pouring sparks, the mat text hidden) but NOT yet captured or scored |
 | HUD — coins, timer, combo, arrow lane, best line, sprint line, depth dial | `Hud.luau`, `Theme.luau` | built | yes | **5** (r1) — no identity; the arrow lane is nearly invisible |
-| CUBES screen — boxes + collection cards | `CollectionPanel.luau` | built | yes: **cards show "?" or a swatch, never the cube** | **4** (r1) — the thing being sold is never shown |
+| CUBES screen — every card a turning 3D preview of its cube (locked ones dark silhouettes) on a tier-coloured tile, the boxes drawn as the sealed cases, the Pro box visibly premium, the hall dark behind the panel | `CollectionPanel.luau`, `CubeBuilder.buildPreview`, `Config.Panel` | rebuilt | round 2 NOT yet captured | **4** (r1) — the rebuild is built and boots clean; its round 2 waits for a capture |
 | Toasts — PERFECT, combo, info, big | `Toasts.luau` | built | the result card only | scored inside the HUD and the pop |
 | Store icon + thumbnails | — | **none** | — | — |
-| The avatar | default Roblox avatar behind the cube | untouched | yes: **its hair pokes into every frame**, and the hatch drop exposes the whole avatar | flagged by every critic; a full point on the cube |
+| The avatar | none: characters no longer spawn (`Players.CharacterAutoLoads = false`) | done | gone from every frame | block 0 done 2026-09-24 |
 | Sound | Roblox built-ins | placeholder | — | — |
 
 The baseline pass ran on 2026-09-24: every piece that could be captured

@@ -150,7 +150,10 @@ Config.Cube = {
 	-- whole reason the game is playable. And no cube's sticker may share
 	-- the arrow's hue (Defs/Cubes.luau keeps to that).
 	Arrow = {
-		Offset = 0.18, -- studs in front of the face
+		-- Barely off the face: at 0.18 the slab floated in front of the
+		-- stickers and, from the raised camera, read a quarter-sticker
+		-- down-left of them (the critic, round 4).
+		Offset = 0.03, -- studs in front of the face
 		Color = Color3.fromRGB(255, 64, 180),
 		WrongColor = Color3.fromRGB(255, 70, 70), -- the arrow flashes this on a wrong swipe
 		WrongFlashSeconds = 0.25,
@@ -671,7 +674,8 @@ Config.Hatch = {
 	GlyphBrightness = 1.4, -- the glowing "?" and tag, before the rattle doubles it
 	LampRange = 9,
 	LampPeak = 3, -- the lamp inside the case at the top of the rattle
-	SparkRate = 70, -- sparks leaking from the seam at the top of the rattle, per second
+	SparkRate = 260, -- sparks pouring from the seam at the top of the rattle, per second
+	LidBandColor = Color3.fromRGB(255, 238, 190), -- the highlight band across the gold sides
 	-- The stage: the hall dims and a pillar of the tier colour stands on the
 	-- station for the length of the hatch -- three neon layers, each wider
 	-- and fainter, so it has no visible edge, with motes drifting up it.
@@ -679,11 +683,14 @@ Config.Hatch = {
 	DimBrightness = -0.22,
 	DimSaturation = -0.4,
 	BeamHeight = 16,
-	BeamLayers = {
-		{ Diameter = 2.4, Transparency = 0.8 },
-		{ Diameter = 4.6, Transparency = 0.9 },
-		{ Diameter = 7.0, Transparency = 0.96 },
-	},
+	-- The pillar is BeamLayerCount nested cylinders, the innermost this
+	-- wide and this see-through, the outermost that wide and almost gone,
+	-- so the eye reads a glow that thins to nothing and never an edge.
+	BeamLayerCount = 9,
+	BeamCoreDiameter = 1.6,
+	BeamOuterDiameter = 8.5,
+	BeamCoreTransparency = 0.76,
+	BeamOuterTransparency = 0.985,
 	BeamBaseHeight = 2.5,
 	BeamBaseTransparency = 0.72,
 	MoteRate = 14,
@@ -691,13 +698,19 @@ Config.Hatch = {
 	-- screen, a ring rolling across the floor, confetti chips in the six
 	-- cube colours thrown from the centre, and sparks.
 	FlashDiameter = 10,
-	FlashTransparency = 0.6,
+	FlashBallTransparency = 0.4,
+	FlashTransparency = 0.78, -- the sheet on the screen: faint, so the chips keep their colours
 	FlashSeconds = 0.3,
 	RingDiameter = 26,
 	RingSeconds = 0.6,
 	Particles = 40,
-	ChipsPerColor = 14,
-	ChipTexture = "rbxasset://textures/ui/GuiImagePlaceholder.png", -- a plain square
+	-- The confetti is real little sticker parts thrown by physics (a
+	-- particle texture would need an image, and the engine's stand-in
+	-- square carries a placeholder glyph), in the six cube colours.
+	ChipCount = 42,
+	ChipSize = 0.36,
+	ChipSpeed = { 11, 24 },
+	ChipSeconds = 1.7,
 	ChipColors = {
 		Color3.fromRGB(245, 245, 245),
 		Color3.fromRGB(250, 220, 40),
@@ -710,6 +723,48 @@ Config.Hatch = {
 
 -- The ScreenGui the HUD lives in (Theme.screen builds it; the hatch hides it).
 Config.HudScreenName = "SpeedCube"
+
+--------------------------------------------------------------------------------
+-- The CUBES screen (client only)
+--------------------------------------------------------------------------------
+--[[
+	The shop and the collection. Every card shows its product as a turning
+	3D preview on a tile in its tier colour; the boxes are the sealed cases
+	the hatch opens; the hall goes dark behind the panel. Laid out for the
+	1280x720 reference the HUD uses (Theme.screen scales it).
+]]
+Config.Panel = {
+	Width = 940,
+	Height = 600,
+	BackdropTransparency = 0.45, -- the hall behind the shop
+	EdgeColor = Color3.fromRGB(60, 170, 255), -- the hall's neon, round the window
+	TileMix = 0.72, -- how far a card's tier colour is pulled toward the panel surface
+	BoxRowHeight = 196,
+	BasicBox = {
+		Width = 300,
+		Height = 160,
+		Tile = Color3.fromRGB(44, 48, 58),
+		Edge = Color3.fromRGB(120, 130, 150),
+		Body = Color3.fromRGB(96, 102, 116),
+		Lid = Color3.fromRGB(58, 60, 70),
+		Seam = Color3.fromRGB(150, 170, 200),
+		MarkSize = 44,
+	},
+	ProBox = {
+		Width = 360,
+		Height = 190,
+		Tile = Color3.fromRGB(52, 34, 72),
+		Edge = Color3.fromRGB(255, 200, 60),
+		Body = Color3.fromRGB(70, 30, 110),
+		Lid = Color3.fromRGB(238, 190, 70),
+		Seam = Color3.fromRGB(255, 210, 90),
+		MarkSize = 56,
+	},
+	Card = { Width = 215, Height = 118 },
+	ViewportAmbient = Color3.fromRGB(120, 120, 135),
+	ViewportFov = 34,
+	SpinRadiansPerSecond = 0.5,
+}
 
 --------------------------------------------------------------------------------
 -- Products: Robux purchases (developer products)

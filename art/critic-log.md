@@ -186,3 +186,33 @@ each entry.
 4. +0.5 shape the burst: confetti chips in the six cube colours dense at the cube and thinning outward; a flash brightest at the seam.
 5. +0.5 the prize clean: no arrows or lane on the cube until the toast clears; the dim landed before the box enters; the pads take the floor glow.
 **Next:** apply 1–5 — attempt 3.
+
+## The thirteen cube looks as a set — attempt 4 — 2026-09-24 — score 8 (was 7) — CLEARED
+
+**Changed since last round:** the Prism's hue sweeps corner to corner across the whole cube (seven or eight hues in one still), five times the sparks, a stronger lamp; Pastel at candy saturation with a small highlight; Jelly all grape with a painted rim and highlight; Frost ice blues, Slate warm greys on charcoal; the Rare gloss a crisp white spot; matte stickers taking less key light.
+**Reason it is not higher:** the Rare rung has a hole — Jelly reads as a dark Common, the one cube in thirteen whose value you cannot tell without reading the label.
+**Keep:** Prism's spectral sweep (lit from inside, still the most expensive object at 150px); Void untouched; Frost and Slate now two cubes; Pastel as the one candy-white cube; the crisp Rare highlight and the row gradients on Ocean and Sunset; polish.
+**Left (for a later pass):** Jelly is inverted — jelly is light passing through, so the body must go lighter and glassier, not darker, in a hue no other cube owns (bubblegum or lime); the gloss is a stamp (the same pill on all 27 stickers including the shadow side — one highlight per lit face instead); Prism's halo on the mat is not visible in the still and its front face is nearly one hue at this moment; Ember's and Sunset's tops read khaki/mustard; Neon and Plasma share a blown-white top; Void's violet merges with the indigo ring at 150px.
+**Next:** stop — cleared 8. The Jelly fix is queued as the first item of any later pass.
+
+## The cube and the arrow prompts — attempt 4 — 2026-09-24 — score 7.75 (was 7.5) — OUT OF ROUNDS
+
+**Changed since last round:** the frame sized to the row and thickened; the pill and the lane drawing the cube's three-ring glyph; the dark outline doubled; the glowing stickers turned down to colour; the station ring indigo.
+**Reason it is not higher:** the whole magenta layer sits a quarter of a sticker down-and-left of the stickers it marks — the frame's top stroke covers the top fifth of each tile, its bottom stroke lies on the mat, and the arrows hug the bottom-left of their tiles.
+**Keep:** one glyph everywhere; the tamed bloom (red is red, the only white-hot points are the arrow cores); magenta meaning "do this" and nothing else; the band's weight; the dark outline that survives on red; the fit to the direction.
+**Left:** the magenta layer off the face (the slab floated 0.18 studs in front of the stickers and the stroke drew outside its frame — both fixed after the round, unscored: Offset 0.03 and the frame inset by its stroke); the band is a flat stroke, not neon tubing with a filament; the ring is lost on red (a one-pixel white line between core and ring would hold it); the pill text grey and small with dead space to its right, the pills see-through (made opaque after the round); dull white stickers; no contact shadow.
+**Next:** stop — out of rounds at 7.75. The post-round fixes go into the next capture of any piece; the tubing filament and the red-safe ring are queued for a later pass.
+
+## The hatch — attempt 3 — 2026-09-24 — score 7 (was 6)
+
+**Changed since last round:** gold lid with a lit rim and a "?" on top; the beam three fading layers with a bright base and motes; sparks from the seam, the seam widening, the lid lifting; a flash from the seam, square confetti chips in the six cube colours, sparks; the stage lands before the case, the pads take the tier colour, the cube revealed clean.
+**Reason it is not higher:** the money frame is still not finished edge to edge — every confetti chip carries Roblox's "no image" placeholder glyph, and the spotlight column still shows straight vertical edges in every frame.
+**Keep:** the stage beat (a stage cue, not a loot box); the shake frame (the best single frame, the right thumbnail); tier colour everywhere; the clean reveal with depth in the confetti; the gold rim.
+**Defects:** the placeholder glyph on every chip (the square texture was the engine's decal placeholder); beam edges softer but not gone; the lid reads as matte paint — flat olive-khaki sides, a washed pink-white top, the top "?" a pale outline, the whole lid blowing to white in the shake; sparse rattle sparks (three or four dots); the burst is one colour (the flash washes the chips); the stage beat spotlights the mat's upside-down text.
+**Ranked list:**
+1. +0.5–1 finish the chips: no placeholder; chips that read as the cube's own stickers, rounded, glowing in their colour.
+2. +0.5 dissolve the beam edges: one column brightest at its centre fading to nothing.
+3. +0.5 a metal finish on the lid: a highlight band on the gold sides, the top face gold not pink, the top "?" lit like the front, the lid staying gold in the shake.
+4. +0.25–0.5 thicker rattle sparks, a cloud pouring from the seam.
+5. +0.25 colour the pop (chips keep their colours through the flash); hide the mat text during the stage beat.
+**Next:** apply 1–5 — attempt 4, the last.

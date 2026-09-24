@@ -451,7 +451,9 @@ function CubeView.build(root: CFrame, options: Options?): Api
 	rowGui.Enabled = false
 	rowGui.Parent = arrow
 	local rowFrame = Instance.new("Frame")
-	rowFrame.Size = UDim2.fromScale(1, 1)
+	-- Inset by the stroke, so the lit edge lands ON the row and not outside it.
+	rowFrame.Size = UDim2.new(1, -A.RowGlowThickness * 2, 1, -A.RowGlowThickness * 2)
+	rowFrame.Position = UDim2.fromOffset(A.RowGlowThickness, A.RowGlowThickness)
 	rowFrame.BackgroundTransparency = 1
 	rowFrame.Parent = rowGui
 	local rowCorner = Instance.new("UICorner")

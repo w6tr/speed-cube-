@@ -157,12 +157,13 @@ end
 -- The station's timer pads take the tier colour for the hatch instead
 -- of sitting under the cube as two black holes. Found by position: the
 -- mat's paint canvas that shares the cube's spot on the floor.
-local function padsNear(root: CFrame): { Frame }
+local function padsNear(root: CFrame): ({ Frame }, { TextLabel })
 	local out: { Frame } = {}
+	local text: { TextLabel } = {}
 	local lobby = workspace:FindFirstChild("Lobby")
 	local stations = lobby and lobby:FindFirstChild("Stations")
 	if not stations then
-		return out
+		return out, text
 	end
 	for _, station in stations:GetChildren() do
 		local canvas = station:FindFirstChild("MatFace")
@@ -174,13 +175,15 @@ local function padsNear(root: CFrame): { Frame }
 					for _, child in paint:GetChildren() do
 						if child:IsA("Frame") and string.sub(child.Name, 1, 3) == "Pad" then
 							table.insert(out, child)
+						elseif child:IsA("TextLabel") then
+							table.insert(text, child)
 						end
 					end
 				end
 			end
 		end
 	end
-	return out
+	return out, text
 end
 
 --[[
@@ -208,14 +211,20 @@ function Hatch.play(root: CFrame, tierColor: Color3, reveal: () -> (), done: () 
 		* CFrame.new(0, H.BeamHeight / 2 - 1.2, 0)
 		* CFrame.Angles(0, 0, math.pi / 2)
 	local beams: { Part } = {}
-	for _, layer in H.BeamLayers do
-		local b = cylinder(model, H.BeamHeight, layer.Diameter, tierColor, 1)
+	for i = 1, H.BeamLayerCount do
+		local t = (i - 1) / (H.BeamLayerCount - 1)
+		local diameter = H.BeamCoreDiameter + (H.BeamOuterDiameter - H.BeamCoreDiameter) * t
+		-- Eased, so the layers thin faster toward the outside and the
+		-- outermost is nearly nothing: no edge to see.
+		local transparency = H.BeamCoreTransparency
+			+ (H.BeamOuterTransparency - H.BeamCoreTransparency) * math.sqrt(t)
+		local b = cylinder(model, H.BeamHeight, diameter, tierColor, 1)
 		b.CFrame = beamCF
-		tween(b, H.DimSeconds, { Transparency = layer.Transparency })
+		tween(b, H.DimSeconds, { Transparency = transparency })
 		table.insert(beams, b)
 	end
 	-- Brightest where it meets the station.
-	local base = cylinder(model, H.BeamBaseHeight, H.BeamLayers[1].Diameter * 1.6, tierColor, 1)
+	local base = cylinder(model, H.BeamBaseHeight, H.BeamCoreDiameter * 2.6, tierColor, 1)
 	base.CFrame = root
 		* CFrame.new(0, -Config.Cube.Height + H.BeamBaseHeight / 2, 0)
 		* CFrame.Angles(0, 0, math.pi / 2)
@@ -223,7 +232,7 @@ function Hatch.play(root: CFrame, tierColor: Color3, reveal: () -> (), done: () 
 
 	local moteBox = block(
 		model,
-		Vector3.new(H.BeamLayers[2].Diameter, H.BeamHeight, H.BeamLayers[2].Diameter),
+		Vector3.new(H.BeamOuterDiameter * 0.5, H.BeamHeight, H.BeamOuterDiameter * 0.5),
 		tierColor,
 		Enum.Material.SmoothPlastic
 	)
@@ -243,11 +252,14 @@ function Hatch.play(root: CFrame, tierColor: Color3, reveal: () -> (), done: () 
 	})
 	motes.Transparency = NumberSequence.new(0.3)
 
-	local pads = padsNear(root)
+	local pads, matText = padsNear(root)
 	local padColours: { Color3 } = {}
 	for i, pad in pads do
 		padColours[i] = pad.BackgroundColor3
 		pad.BackgroundColor3 = tierColor:Lerp(Color3.new(0, 0, 0), 0.35)
+	end
+	for _, label in matText do
+		label.Visible = false
 	end
 
 	stageHud(false)
@@ -285,8 +297,34 @@ function Hatch.play(root: CFrame, tierColor: Color3, reveal: () -> (), done: () 
 		faceGui(body, Enum.NormalId.Front, tierColor, 0.6, false),
 		faceGui(body, Enum.NormalId.Left, tierColor, 0.6, false),
 		faceGui(body, Enum.NormalId.Right, tierColor, 0.6, false),
-		faceGui(lid, Enum.NormalId.Top, tierColor, 0.8, false),
 	}
+	-- The top face is the biggest face from the locked camera: it stays
+	-- gold whatever the lamps do, with the "?" lit like the front ones,
+	-- and it is left out of the rattle's brightening so it never blows out.
+	local crown = faceGui(lid, Enum.NormalId.Top, tierColor, 0.8, false)
+	local goldFace = Instance.new("Frame")
+	goldFace.Name = "Gold"
+	goldFace.Size = UDim2.fromScale(1, 1)
+	goldFace.BackgroundColor3 = H.LidColor
+	goldFace.BorderSizePixel = 0
+	goldFace.ZIndex = 0
+	goldFace.Parent = crown
+	local goldGrad = Instance.new("UIGradient")
+	goldGrad.Rotation = 35
+	goldGrad.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, H.LidColor),
+		ColorSequenceKeypoint.new(0.45, H.LidBandColor),
+		ColorSequenceKeypoint.new(0.55, H.LidBandColor),
+		ColorSequenceKeypoint.new(1, H.LidColor:Lerp(Color3.new(0, 0, 0), 0.25)),
+	})
+	goldGrad.Parent = goldFace
+	crown.Brightness = 1.1
+	local band = block(
+		model,
+		Vector3.new(side + 0.26, 0.05, side + 0.26),
+		H.LidBandColor,
+		Enum.Material.Neon
+	)
 
 	local lamp = Instance.new("PointLight")
 	lamp.Color = tierColor
@@ -297,15 +335,15 @@ function Hatch.play(root: CFrame, tierColor: Color3, reveal: () -> (), done: () 
 
 	-- Sparks leak from the seam as the rattle builds.
 	local sparks = emitter(seam, tierColor)
-	sparks.Lifetime = NumberRange.new(0.5, 0.9)
-	sparks.Speed = NumberRange.new(2, 4)
-	sparks.SpreadAngle = Vector2.new(60, 60)
+	sparks.Lifetime = NumberRange.new(0.7, 1.2)
+	sparks.Speed = NumberRange.new(3, 6)
+	sparks.SpreadAngle = Vector2.new(70, 70)
 	sparks.Shape = Enum.ParticleEmitterShape.Box
 	sparks.ShapeStyle = Enum.ParticleEmitterShapeStyle.Surface
 	sparks.ShapeInOut = Enum.ParticleEmitterShapeInOut.Outward
 	sparks.Acceleration = Vector3.new(0, -6, 0)
 	sparks.Size = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0.14),
+		NumberSequenceKeypoint.new(0, 0.22),
 		NumberSequenceKeypoint.new(1, 0),
 	})
 
@@ -317,6 +355,7 @@ function Hatch.play(root: CFrame, tierColor: Color3, reveal: () -> (), done: () 
 		local lidCF = cf * CFrame.new(0, bodyHeight / 2 + seamHeight + lidHeight / 2 + lidLift, 0)
 		lid.CFrame = lidCF
 		rim.CFrame = lidCF * CFrame.new(0, lidHeight / 2 - 0.035, 0)
+		band.CFrame = lidCF * CFrame.new(0, -lidHeight * 0.1, 0)
 	end
 
 	----------------------------------------------------------------------------
@@ -326,23 +365,36 @@ function Hatch.play(root: CFrame, tierColor: Color3, reveal: () -> (), done: () 
 	local burstPart = block(model, Vector3.new(1, 1, 1), tierColor, Enum.Material.Neon)
 	burstPart.Transparency = 1
 	burstPart.CFrame = root
-	local chips: { ParticleEmitter } = {}
-	for _, colour in H.ChipColors do
-		local e = emitter(burstPart, colour)
-		e.Texture = H.ChipTexture
-		e.Lifetime = NumberRange.new(1.1, 1.8)
-		e.Speed = NumberRange.new(12, 24)
-		e.SpreadAngle = Vector2.new(180, 180)
-		e.Acceleration = Vector3.new(0, -26, 0)
-		e.Drag = 1.6
-		e.Rotation = NumberRange.new(0, 360)
-		e.RotSpeed = NumberRange.new(-400, 400)
-		e.Size = NumberSequence.new({
-			NumberSequenceKeypoint.new(0, 0.38),
-			NumberSequenceKeypoint.new(0.7, 0.3),
-			NumberSequenceKeypoint.new(1, 0),
-		})
-		table.insert(chips, e)
+	-- The confetti is the cube's own stickers flying off the box: little
+	-- glowing squares in the six cube colours, thrown from the centre and
+	-- left to physics, so the near ones are big and the far ones small.
+	local rng = Random.new()
+	local function throwChips()
+		local folder = Instance.new("Folder")
+		folder.Name = "Chips"
+		folder.Parent = workspace
+		for i = 1, H.ChipCount do
+			local chip = Instance.new("Part")
+			chip.Size = Vector3.new(H.ChipSize, H.ChipSize, 0.06)
+			chip.Color = H.ChipColors[(i - 1) % #H.ChipColors + 1]
+			chip.Material = Enum.Material.Neon
+			chip.CanCollide = false
+			chip.CanQuery = false
+			chip.CanTouch = false
+			chip.CastShadow = false
+			chip.Massless = true
+			local dir = rng:NextUnitVector()
+			dir = Vector3.new(dir.X, math.abs(dir.Y) * 0.8 + 0.3, dir.Z).Unit
+			chip.CFrame = root
+				* CFrame.new(dir * 0.6)
+				* CFrame.Angles(rng:NextNumber(0, 6.3), rng:NextNumber(0, 6.3), 0)
+			chip.Parent = folder
+			chip.AssemblyLinearVelocity = dir * rng:NextNumber(H.ChipSpeed[1], H.ChipSpeed[2])
+			chip.AssemblyAngularVelocity = rng:NextUnitVector() * rng:NextNumber(6, 14)
+		end
+		task.delay(H.ChipSeconds, function()
+			folder:Destroy()
+		end)
 	end
 	local sparksOut = emitter(burstPart, tierColor)
 	sparksOut.Lifetime = NumberRange.new(0.6, 1.1)
@@ -430,7 +482,7 @@ function Hatch.play(root: CFrame, tierColor: Color3, reveal: () -> (), done: () 
 		-- Burst.
 		sparks.Rate = 0
 		flashBall.CFrame = seam.CFrame
-		flashBall.Transparency = 0.1
+		flashBall.Transparency = H.FlashBallTransparency
 		tween(flashBall, H.FlashSeconds, { Size = Vector3.one * H.FlashDiameter, Transparency = 1 })
 		flashFrame.BackgroundTransparency = H.FlashTransparency
 		tween(flashFrame, H.FlashSeconds, { BackgroundTransparency = 1 })
@@ -439,13 +491,12 @@ function Hatch.play(root: CFrame, tierColor: Color3, reveal: () -> (), done: () 
 			Size = Vector3.new(0.12, H.RingDiameter, H.RingDiameter),
 			Transparency = 1,
 		})
-		for _, e in chips do
-			e:Emit(H.ChipsPerColor)
-		end
+		throwChips()
 		sparksOut:Emit(H.Particles)
 		for _, gui in faces do
 			gui.Enabled = false
 		end
+		crown.Enabled = false
 		local fly = lid.CFrame * CFrame.new(0, 8, 0) * CFrame.Angles(0.7, 0.5, 0)
 		tween(lid, H.RevealSeconds, { CFrame = fly, Transparency = 1 })
 		tween(
@@ -453,6 +504,7 @@ function Hatch.play(root: CFrame, tierColor: Color3, reveal: () -> (), done: () 
 			H.RevealSeconds,
 			{ CFrame = fly * CFrame.new(0, lidHeight / 2, 0), Transparency = 1 }
 		)
+		tween(band, H.RevealSeconds, { CFrame = fly, Transparency = 1 })
 		tween(body, H.RevealSeconds, { Transparency = 1 })
 		tween(seam, H.RevealSeconds, { Transparency = 1 })
 		tween(lamp, H.RevealSeconds + H.HoldSeconds, { Brightness = 0 })
@@ -469,6 +521,9 @@ function Hatch.play(root: CFrame, tierColor: Color3, reveal: () -> (), done: () 
 		task.wait(H.DimSeconds)
 		for i, pad in pads do
 			pad.BackgroundColor3 = padColours[i]
+		end
+		for _, label in matText do
+			label.Visible = true
 		end
 		stageHud(true)
 		dim:Destroy()
